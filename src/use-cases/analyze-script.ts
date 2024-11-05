@@ -1,11 +1,10 @@
+import type { TextAnalysisProvider } from "@/providers/text-analysis";
+import type { ScriptsRepository } from "@/repositories/scripts-repository";
 import type { Script } from "@prisma/client";
-import type { TextAnalysisProvider } from "../providers/text-analysis";
-import type { ScriptsRepository } from "../repositories/scripts-repository";
-
 
 interface AnalyzeScriptUseCaseRequest {
   content: string
-  targetEmotion: string
+  targetEmotion?: string
   userId: string
 }
 

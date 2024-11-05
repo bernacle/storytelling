@@ -1,12 +1,16 @@
 import fastify from 'fastify'
 import { ZodError } from 'zod'
 import { env } from './env'
+import { scriptRoutes } from './http/controllers/scripts/routes';
 
 export const app = fastify()
 
 app.get('/healthcheck', async (request, reply) => {
   return { status: env.DATABASE_URL };
 });
+
+
+app.register(scriptRoutes)
 
 
 app.setErrorHandler((error, _, reply) => {
