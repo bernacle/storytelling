@@ -8,16 +8,15 @@ export async function create(request: FastifyRequest, reply: FastifyReply) {
     targetEmotion: z.string().optional(),
   })
 
-
   const { content, targetEmotion } = createScriptParamsSchema.parse(request.body)
 
   const analyzeScriptUseCase = makeAnalyzeScriptUseCase()
 
-  await analyzeScriptUseCase.execute({
+  const { script } = await analyzeScriptUseCase.execute({
     content,
     targetEmotion,
     userId: "userId"
   })
 
-  return reply.status(201).send()
+  return reply.status(201).send({ script })
 }

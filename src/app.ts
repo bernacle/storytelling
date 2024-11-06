@@ -2,6 +2,8 @@ import fastify from 'fastify'
 import { ZodError } from 'zod'
 import { env } from './env'
 import { scriptRoutes } from './http/controllers/scripts/routes';
+import { userRoutes } from './http/controllers/users/routes';
+import { apiKeyRoutes } from './http/controllers/api-keys/routes';
 
 export const app = fastify()
 
@@ -11,6 +13,8 @@ app.get('/healthcheck', async (request, reply) => {
 
 
 app.register(scriptRoutes)
+app.register(userRoutes)
+app.register(apiKeyRoutes)
 
 
 app.setErrorHandler((error, _, reply) => {

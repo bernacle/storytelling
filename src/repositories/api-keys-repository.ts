@@ -1,6 +1,7 @@
 import { ApiKey, type Prisma } from '@prisma/client'
 
 export interface ApiKeysRepository {
-  findById(id: string): Promise<ApiKey | null>
+  findManyByUserId(userId: string): Promise<ApiKey[]>
   create(data: Prisma.ApiKeyCreateInput): Promise<ApiKey>
+  revoke(id: string): Promise<ApiKey>
 }
