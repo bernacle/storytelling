@@ -1,9 +1,10 @@
 import fastify from 'fastify'
 import { ZodError } from 'zod'
-import { env } from './env'
-import { scriptRoutes } from './http/controllers/scripts/routes';
-import { userRoutes } from './http/controllers/users/routes';
-import { apiKeyRoutes } from './http/controllers/api-keys/routes';
+import { env } from '@/env'
+
+import { userRoutes } from '@/modules/users/controllers/routes';
+import { scriptRoutes } from '@/modules/scripts/controllers/routes';
+import { apiKeyRoutes } from '@/modules/api-keys/controllers/routes';
 
 export const app = fastify()
 

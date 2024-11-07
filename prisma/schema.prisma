@@ -57,6 +57,8 @@ model Voice {
   voice_type String
   tone       String
   status     RequestStatus @default(PENDING)
+  audio_url  String?
+  error      String?
   created_at DateTime      @default(now())
   updated_at DateTime      @updatedAt
 
