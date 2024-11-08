@@ -1,6 +1,6 @@
 import fastify from 'fastify'
 import { ZodError } from 'zod'
-import { env } from '@/env'
+import { env } from './env'
 
 import { userRoutes } from '@/modules/users/controllers/routes';
 import { scriptRoutes } from '@/modules/scripts/controllers/routes';
@@ -9,7 +9,7 @@ import { apiKeyRoutes } from '@/modules/api-keys/controllers/routes';
 export const app = fastify()
 
 app.get('/healthcheck', async (request, reply) => {
-  return { status: env.DATABASE_URL };
+  return { status: "OK" };
 });
 
 
