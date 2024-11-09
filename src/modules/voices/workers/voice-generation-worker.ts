@@ -26,32 +26,40 @@ export function createVoiceWorker(
       const { voiceId, scriptId, voiceOptions } = job.data
 
       try {
-        // Update status to processing
+        console.log(`Processing voice generation for script ${scriptId}`)
+
         await voicesRepository.updateStatus(voiceId, 'PROCESSING')
 
-        // Get script content
         const script = await scriptsRepository.findById(scriptId)
         if (!script) {
-          throw new Error('Script not found')
+          throw new Error(`Script not found: ${scriptId}`)
         }
 
-        // Generate voice
+        console.log('Generating voice with options:', voiceOptions)
+
         const result = await voiceProvider.generate(
           script.content,
           voiceOptions
         )
 
-        // Update with result
+        console.log('Voice generation successful:', result)
+
         await voicesRepository.updateStatus(voiceId, 'COMPLETED', {
           audio_url: result.audioUrl
         })
       } catch (error) {
-        // Update status to failed
+        console.error('Voice generation error:', {
+          error: error instanceof Error ? error.stack : error,
+          voiceId,
+          scriptId,
+          options: voiceOptions
+        })
+
         await voicesRepository.updateStatus(voiceId, 'FAILED', {
           error: error instanceof Error ? error.message : 'Unknown error'
         })
 
-        throw error // Rethrow to trigger BullMQ retry
+        throw error
       }
     },
     {

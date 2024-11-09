@@ -1,7 +1,7 @@
 
 import Groq from "groq-sdk";
 import { GroqAnalysisProvider } from "@/providers/text-analysis";
-import { AnalyzeScriptUseCase } from "../analyze-script";
+import { AnalyzeScriptUseCase } from "../analyze-script-use-case";
 import { PrismaScriptsRepository } from "../../repositories/prisma/prisma-scripts-repository";
 
 export function makeAnalyzeScriptUseCase(): AnalyzeScriptUseCase {

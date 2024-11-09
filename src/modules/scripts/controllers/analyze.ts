@@ -2,13 +2,13 @@ import { makeAnalyzeScriptUseCase } from '@/modules/scripts/use-cases/factories/
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 
-export async function create(request: FastifyRequest, reply: FastifyReply) {
-  const createScriptParamsSchema = z.object({
+export async function analyze(request: FastifyRequest, reply: FastifyReply) {
+  const analyzeScriptParamsSchema = z.object({
     content: z.string(),
     target_emotion: z.string().optional(),
   })
 
-  const { content, target_emotion } = createScriptParamsSchema.parse(request.body)
+  const { content, target_emotion } = analyzeScriptParamsSchema.parse(request.body)
 
   const analyzeScriptUseCase = makeAnalyzeScriptUseCase()
 

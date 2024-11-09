@@ -2,11 +2,12 @@ import { Queue } from 'bullmq'
 import type { VoicesRepository } from '../repositories/voices-repository';
 import type { ScriptsRepository } from '@/modules/scripts/repositories/scripts-repository';
 import type { Voice } from '@prisma/client';
+import type { AnalysisResponse } from '@/providers/text-analysis';
 
 interface CreateVoiceUseCaseRequest {
   scriptId: string,
   voiceId: string,
-  tone: string,
+  toneInput?: string,
   speed?: number,
 }
 
@@ -19,12 +20,15 @@ interface CreateVoiceUseCaseResponse {
 export class CreateVoiceUseCase {
   constructor(private readonly scriptsRepository: ScriptsRepository, private readonly voicesRepository: VoicesRepository, private voiceQueue: Queue) { }
 
-  async execute({ scriptId, voiceId, tone, speed }: CreateVoiceUseCaseRequest): Promise<CreateVoiceUseCaseResponse> {
+  async execute({ scriptId, voiceId, toneInput, speed }: CreateVoiceUseCaseRequest): Promise<CreateVoiceUseCaseResponse> {
     const script = await this.scriptsRepository.findById(scriptId)
 
     if (!script) {
       throw new Error('Script not found')
     }
+
+    const analysis = script.analysis as AnalysisResponse
+    const tone = toneInput || analysis.tone || 'neutral'
 
     const voice = await this.voicesRepository.create({
       script: { connect: { id: scriptId } },

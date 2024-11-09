@@ -16,4 +16,14 @@ export class PrismaScriptsRepository implements ScriptsRepository {
     return script
   }
 
+  async findManyByUserId(userId: string): Promise<Script[]> {
+    const scripts = await prisma.script.findMany({
+      where: {
+        user_id: userId
+      }
+    })
+
+    return scripts
+  }
+
 }

@@ -1,24 +1,19 @@
 import { PrismaScriptsRepository } from "@/modules/scripts/repositories/prisma/prisma-scripts-repository"
-import Redis from 'ioredis'
 import { PrismaVoicesRepository } from "../../repositories/prisma/prisma-voices-repository"
 import { createVoiceWorker } from "../voice-generation-worker"
 import { PlayHTProvider } from "@/providers/voice-generation/impl/playht-voice-generation-provider"
+import { redis } from '@/lib/redis'
 
 export function makeVoiceWorker() {
   const voicesRepository = new PrismaVoicesRepository()
   const scriptsRepository = new PrismaScriptsRepository()
 
-  const connection = new Redis({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: Number(process.env.REDIS_PORT) || 6379,
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-  })
+  const voiceProvider = new PlayHTProvider()
 
   return createVoiceWorker(
-    connection,
+    redis,
     voicesRepository,
     scriptsRepository,
-    new PlayHTProvider()
+    voiceProvider
   )
 }

@@ -38,6 +38,7 @@ export async function checkApiKey(
     }
 
   } catch (error) {
+    console.log(error)
     return reply.status(500).send({
       error: 'Error validating API key'
     })
