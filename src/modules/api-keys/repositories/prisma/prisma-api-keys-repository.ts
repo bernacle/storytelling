@@ -12,6 +12,19 @@ export class PrismaApiKeysRepository implements ApiKeysRepository {
 
     return apiKeys
   }
+
+  async findById(id: string, userId: string): Promise<ApiKey | null> {
+    const apiKey = await prisma.apiKey.findUnique({
+      where: {
+        id: id,
+        user_id: userId,
+        status: "ACTIVE"
+      }
+    })
+
+    return apiKey
+  }
+
   async create(data: Prisma.ApiKeyCreateInput): Promise<ApiKey> {
     const apiKey = await prisma.apiKey.create({
       data
@@ -19,10 +32,11 @@ export class PrismaApiKeysRepository implements ApiKeysRepository {
 
     return apiKey
   }
-  async revoke(id: string): Promise<ApiKey> {
+  async revoke(id: string, userId: string): Promise<ApiKey> {
     const apiKey = await prisma.apiKey.update({
       where: {
-        id
+        id,
+        user_id: userId
       },
       data: {
         status: "REVOKED"
