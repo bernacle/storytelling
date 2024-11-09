@@ -2,12 +2,12 @@ import type { ApiKeysRepository } from "@/modules/api-keys/repositories/api-keys
 import type { ApiKey } from "@prisma/client";
 import { ApiKeyRevoked } from "./errors/api-key-already-revoked-error";
 
-interface RevokeApiKeyUseCaseRequest {
+type RevokeApiKeyUseCaseRequest = {
   id: string
   userId: string
 }
 
-interface RevokeApiKeyUseCaseResponse {
+type RevokeApiKeyUseCaseResponse = {
   apiKey: ApiKey
 }
 

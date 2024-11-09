@@ -1,11 +1,11 @@
 import type { ScriptsRepository } from "@/modules/scripts/repositories/scripts-repository";
 import type { Script } from "@prisma/client";
 
-interface ListScriptsUseCaseRequest {
+type ListScriptsUseCaseRequest = {
   userId: string
 }
 
-interface ListScriptsUseCaseResponse {
+type ListScriptsUseCaseResponse = {
   scripts: Script[]
 }
 

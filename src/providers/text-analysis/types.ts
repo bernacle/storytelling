@@ -9,7 +9,7 @@ export type AnalysisResponse = {
   modifiedScript?: string
 }
 
-export interface AnalysisRequest {
+export type AnalysisRequest = {
   content: string
   targetEmotion?: string
 }

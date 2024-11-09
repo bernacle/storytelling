@@ -4,11 +4,11 @@ import type { ScriptsRepository } from '@/modules/scripts/repositories/scripts-r
 import type { Voice } from '@prisma/client';
 import { VoiceNotFoundError } from './errors/voice-not-found-error';
 
-interface GetVoiceUseCaseRequest {
+type GetVoiceUseCaseRequest = {
   id: string,
 }
 
-interface GetVoiceUseCaseResponse {
+type GetVoiceUseCaseResponse = {
   voice: Voice
 }
 

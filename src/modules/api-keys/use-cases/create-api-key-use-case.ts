@@ -2,12 +2,12 @@ import { generateApiKey } from "@/helpers/generate-api-key";
 import type { ApiKeysRepository } from "@/modules/api-keys/repositories/api-keys-repository";
 import type { ApiKey } from "@prisma/client";
 
-interface CreateApiKeyUseCaseRequest {
+type CreateApiKeyUseCaseRequest = {
   userId: string
   label: string
 }
 
-interface CreateApiKeyUseCaseResponse {
+type CreateApiKeyUseCaseResponse = {
   apiKey: ApiKey
 }
 

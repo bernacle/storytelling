@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "worker": "tsx watch src/workers/voice/index.ts",
+    "worker": "tsx watch src/workers/index.ts",
     "lint": "eslint 'src/**/*.{ts,js}'",
     "lint:fix": "eslint 'src/**/*.{ts,js}' --fix"
   },
@@ -19,6 +19,7 @@
     "fastify": "^5.1.0",
     "groq-sdk": "^0.7.0",
     "ioredis": "^5.4.1",
+    "openai": "^4.71.1",
     "playht": "^0.13.0",
     "zod": "^3.23.8"
   },

@@ -2,11 +2,11 @@ import type { UsersRepository } from "@/modules/users/repositories/users-reposit
 import type { User } from "@prisma/client";
 import { UserAlreadyExistsError } from "./errors/user-already-exists-error";
 
-interface CreateUserUseCaseRequest {
+type CreateUserUseCaseRequest = {
   email: string
 }
 
-interface CreateUserUseCaseResponse {
+type CreateUserUseCaseResponse = {
   user: User
 }
 

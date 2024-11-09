@@ -2,13 +2,13 @@ import type { TextAnalysisProvider } from "@/providers/text-analysis";
 import type { ScriptsRepository } from "@/modules/scripts/repositories/scripts-repository";
 import type { Script } from "@prisma/client";
 
-interface AnalyzeScriptUseCaseRequest {
+type AnalyzeScriptUseCaseRequest = {
   content: string
   targetEmotion?: string
   userId: string
 }
 
-interface AnalyzeScriptUseCaseResponse {
+type AnalyzeScriptUseCaseResponse = {
   script: Script
 }
 

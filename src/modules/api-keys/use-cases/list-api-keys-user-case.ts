@@ -1,11 +1,11 @@
 import type { ApiKeysRepository } from "@/modules/api-keys/repositories/api-keys-repository";
 import type { ApiKey } from "@prisma/client";
 
-interface ListApiKeysUseCaseRequest {
+type ListApiKeysUseCaseRequest = {
   userId: string
 }
 
-interface ListApiKeysUseCaseResponse {
+type ListApiKeysUseCaseResponse = {
   apiKeys: ApiKey[]
 }
 

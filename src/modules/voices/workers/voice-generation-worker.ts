@@ -4,7 +4,7 @@ import { ScriptsRepository } from '../../scripts/repositories/scripts-repository
 import type { VoiceGenerationProvider } from '@/providers/voice-generation'
 import type * as IORedis from 'ioredis'
 
-interface VoiceGenerationJob {
+type VoiceGenerationJob = {
   voiceId: string
   scriptId: string
   voiceOptions: {

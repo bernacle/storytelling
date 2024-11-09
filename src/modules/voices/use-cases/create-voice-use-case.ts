@@ -3,19 +3,18 @@ import type { VoicesRepository } from '../repositories/voices-repository';
 import type { ScriptsRepository } from '@/modules/scripts/repositories/scripts-repository';
 import type { Voice } from '@prisma/client';
 import type { AnalysisResponse } from '@/providers/text-analysis';
+import { ScriptNotFoundError } from '@/modules/scripts/use-cases/errors/script-not-found-error';
 
-interface CreateVoiceUseCaseRequest {
+type CreateVoiceUseCaseRequest = {
   scriptId: string,
   voiceId: string,
   toneInput?: string,
   speed?: number,
 }
 
-interface CreateVoiceUseCaseResponse {
+type CreateVoiceUseCaseResponse = {
   voice: Voice
 }
-
-
 
 export class CreateVoiceUseCase {
   constructor(private readonly scriptsRepository: ScriptsRepository, private readonly voicesRepository: VoicesRepository, private voiceQueue: Queue) { }
@@ -24,7 +23,7 @@ export class CreateVoiceUseCase {
     const script = await this.scriptsRepository.findById(scriptId)
 
     if (!script) {
-      throw new Error('Script not found')
+      throw new ScriptNotFoundError()
     }
 
     const analysis = script.analysis as AnalysisResponse
