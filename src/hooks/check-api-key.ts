@@ -13,6 +13,8 @@ export async function checkApiKey(
     })
   }
 
+  console.log("apiKey", apiKey)
+
   try {
     const key = await prisma.apiKey.findFirst({
       where: {
