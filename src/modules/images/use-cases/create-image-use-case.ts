@@ -3,6 +3,8 @@ import { Image } from '@prisma/client'
 import type { ImagesRepository } from '../repositories/images-repository';
 import type { Queue } from 'bullmq';
 import { ScriptNotFoundError } from '@/modules/scripts/use-cases/errors/script-not-found-error';
+import type { AnalysisResponse } from '@/providers/text-analysis';
+import { createVisualPrompt } from './helpers/emotion-to-visual-mapper';
 
 
 type CreateImageUseCaseRequest = {
@@ -22,12 +24,16 @@ export class CreateImageUseCase {
     private imageQueue: Queue,
   ) { }
 
-  async execute({ scriptId, prompt, style }: CreateImageUseCaseRequest): Promise<CreateImageUseCaseResponse> {
+  async execute({ scriptId, style }: CreateImageUseCaseRequest): Promise<CreateImageUseCaseResponse> {
     const script = await this.scriptsRepository.findById(scriptId)
 
     if (!script) {
       throw new ScriptNotFoundError()
     }
+
+    const analysis = script.analysis as AnalysisResponse
+    const prompt = this.createPromptFromScript(script.content, analysis, style)
+
 
     const image = await this.imagesRepository.create({
       prompt,
@@ -57,5 +63,33 @@ export class CreateImageUseCase {
     )
 
     return { image }
+  }
+
+  private createPromptFromScript(
+    content: string,
+    analysis: AnalysisResponse,
+    style: 'REALISTIC' | 'CARTOON' | 'MINIMALISTIC',
+    sceneIndex?: number
+  ): string {
+    if (sceneIndex !== undefined && analysis.scenes[sceneIndex]) {
+      const scene = analysis.scenes[sceneIndex];
+      return createVisualPrompt(
+        scene.text,
+        scene.emotion,
+        analysis.mood,
+        style
+      );
+    }
+
+    const dominantEmotion = analysis.emotions.reduce((prev, current) =>
+      current.intensity > prev.intensity ? current : prev
+    );
+
+    return createVisualPrompt(
+      content,
+      dominantEmotion.name,
+      analysis.mood,
+      style
+    );
   }
 }

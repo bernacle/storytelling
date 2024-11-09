@@ -1,4 +1,4 @@
-import { ConnectionOptions, Job, Worker } from 'bullmq'
+import { Job, Worker } from 'bullmq'
 import { VoicesRepository } from '../repositories/voices-repository'
 import { ScriptsRepository } from '../../scripts/repositories/scripts-repository'
 import type { VoiceGenerationProvider } from '@/providers/voice-generation'
