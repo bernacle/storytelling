@@ -72,14 +72,15 @@ model Voice {
 }
 
 model Image {
-  id         String        @id @default(uuid())
-  prompt     String
-  style      Style
-  image_url  String?
-  error      String?
-  status     RequestStatus @default(PENDING)
-  created_at DateTime      @default(now())
-  updated_at DateTime      @updatedAt
+  id          String        @id @default(uuid())
+  prompt      String
+  style       Style
+  image_url   String?
+  error       String?
+  status      RequestStatus @default(PENDING)
+  scene_index Int?
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
 
   user      User   @relation(fields: [user_id], references: [id])
   user_id   String

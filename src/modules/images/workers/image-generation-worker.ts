@@ -7,6 +7,7 @@ import type * as IORedis from 'ioredis'
 type ImageGenerationJob = {
   imageId: string;
   scriptId: string;
+  sceneIndex?: number;
   imageOptions: {
     prompt: string;
     style: 'REALISTIC' | 'CARTOON' | 'MINIMALISTIC';
@@ -22,24 +23,32 @@ export function createImageWorker(
   return new Worker<ImageGenerationJob>(
     'generate-image',
     async (job: Job) => {
-      const { imageId, scriptId, imageOptions } = job.data
+      const { imageId, scriptId, sceneIndex, imageOptions } = job.data
 
       try {
-        console.log(`Processing image generation for script ${scriptId}`)
+        const logContext = sceneIndex !== undefined
+          ? `scene ${sceneIndex} of script ${scriptId}`
+          : `script ${scriptId}`
+
+        console.log(`Processing image generation for ${logContext}`)
 
         await imagesRepository.updateStatus(imageId, 'PROCESSING')
 
         console.log('Generating image with options:', {
           style: imageOptions.style,
-          promptLength: imageOptions.prompt.length
+          promptLength: imageOptions.prompt.length,
+          sceneIndex
         })
+
+        // Add delay between requests to respect rate limits
+        await enforceRateLimit()
 
         const result = await imageProvider.generate({
           prompt: imageOptions.prompt,
           style: imageOptions.style.toLowerCase()
         })
 
-        console.log('Image generation successful:', {
+        console.log(`Image generation successful for ${logContext}:`, {
           imageId,
           imageUrlLength: result.imageUrl.length
         })
@@ -48,10 +57,18 @@ export function createImageWorker(
           image_url: result.imageUrl
         })
       } catch (error) {
+        if (isRateLimitError(error)) {
+          // If we hit rate limit, wait before retrying
+          console.log('Rate limit hit, waiting before retry')
+          await new Promise(resolve => setTimeout(resolve, 60 * 1000)) // 1 minute delay
+          throw error // This will trigger the job retry
+        }
+
         console.error('Image generation error:', {
           error: error instanceof Error ? error.stack : error,
           imageId,
           scriptId,
+          sceneIndex,
           options: imageOptions
         })
 
@@ -64,7 +81,40 @@ export function createImageWorker(
     },
     {
       connection,
-      concurrency: 5
+      concurrency: 2, // Reduced from 5 to stay under HuggingFace limits
+      limiter: {
+        max: 2, // Maximum 2 jobs per interval
+        duration: 1000 * 60 // 1 minute interval
+      }
     }
   )
+}
+
+// Track the last request time
+let lastRequestTime = 0
+const MIN_REQUEST_INTERVAL = 20 * 1000 // 20 seconds between requests
+
+async function enforceRateLimit() {
+  const now = Date.now()
+  const timeSinceLastRequest = now - lastRequestTime
+
+  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+    const delay = MIN_REQUEST_INTERVAL - timeSinceLastRequest
+    await new Promise(resolve => setTimeout(resolve, delay))
+  }
+
+  lastRequestTime = Date.now()
+}
+
+function isRateLimitError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const errorMessage = error.message.toLowerCase()
+    return (
+      errorMessage.includes('rate limit') ||
+      errorMessage.includes('429') ||
+      errorMessage.includes('max requests') ||
+      errorMessage.includes('too many requests')
+    )
+  }
+  return false
 }

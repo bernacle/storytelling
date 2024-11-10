@@ -5,6 +5,7 @@ import type { Queue } from 'bullmq';
 import { ScriptNotFoundError } from '@/modules/scripts/use-cases/errors/script-not-found-error';
 import type { AnalysisResponse } from '@/providers/text-analysis';
 import { createVisualPrompt } from './helpers/emotion-to-visual-mapper';
+import { ScenesNotFoundInScriptError } from '@/modules/scripts/use-cases/errors/scenes-not-found-in-script-error';
 
 
 type CreateImageUseCaseRequest = {
@@ -13,7 +14,7 @@ type CreateImageUseCaseRequest = {
 }
 
 type CreateImageUseCaseResponse = {
-  image: Image;
+  images: Image[];
 }
 
 export class CreateImageUseCase {
@@ -31,64 +32,58 @@ export class CreateImageUseCase {
     }
 
     const analysis = script.analysis as AnalysisResponse
-    const prompt = this.createPromptFromScript(script.content, analysis, style)
 
+    if (!analysis.scenes || analysis.scenes.length === 0) {
+      throw new ScenesNotFoundInScriptError()
+    }
 
-    const image = await this.imagesRepository.create({
-      prompt,
-      style,
-      status: 'PENDING',
-      script: { connect: { id: scriptId } },
-      user: { connect: { id: script.user_id } },
-    })
-
-    await this.imageQueue.add(
-      'generate-image',
-      {
-        imageId: image.id,
-        scriptId,
-        imageOptions: {
-          prompt,
-          style
-        }
-      },
-      {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 1000
-        }
-      }
-    )
-
-    return { image }
-  }
-
-  private createPromptFromScript(
-    content: string,
-    analysis: AnalysisResponse,
-    style: 'REALISTIC' | 'CARTOON' | 'MINIMALISTIC',
-    sceneIndex?: number
-  ): string {
-    if (sceneIndex !== undefined && analysis.scenes[sceneIndex]) {
-      const scene = analysis.scenes[sceneIndex];
-      return createVisualPrompt(
+    const imagePromises = analysis.scenes.map(async (scene, sceneIndex) => {
+      const prompt = createVisualPrompt(
         scene.text,
         scene.emotion,
         analysis.mood,
         style
-      );
-    }
+      )
 
-    const dominantEmotion = analysis.emotions.reduce((prev, current) =>
-      current.intensity > prev.intensity ? current : prev
-    );
+      // Create image record for the scene
+      const image = await this.imagesRepository.create({
+        prompt,
+        style,
+        status: 'PENDING',
+        scene_index: sceneIndex,
+        script: { connect: { id: scriptId } },
+        user: { connect: { id: script.user_id } },
+      })
 
-    return createVisualPrompt(
-      content,
-      dominantEmotion.name,
-      analysis.mood,
-      style
-    );
+      // Queue image generation
+      await this.imageQueue.add(
+        'generate-image',
+        {
+          imageId: image.id,
+          scriptId,
+          sceneIndex,
+          imageOptions: {
+            prompt,
+            style
+          }
+        },
+        {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 1000
+          }
+        }
+      )
+
+      return image
+    })
+
+    // Execute all image creation promises concurrently
+    const images = await Promise.all(imagePromises)
+
+    return { images }
   }
+
+
 }
