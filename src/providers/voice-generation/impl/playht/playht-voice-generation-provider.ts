@@ -36,7 +36,6 @@ export class PlayHTProvider implements VoiceGenerationProvider {
   private async findBestVoiceMatch(preference: VoicePreference): Promise<PlayHT.VoiceInfo> {
     const voices = await this.getVoices();
 
-    // Map the accent to PlayHT's languageCode format
     const mappedLanguageCode = preference.accent ? accentMapping[preference.accent] : undefined;
 
     const matches = voices.filter(voice => {

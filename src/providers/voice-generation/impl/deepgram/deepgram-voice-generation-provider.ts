@@ -23,7 +23,7 @@ export class DeepgramVoiceProvider implements VoiceGenerationProvider {
 
   async generate(text: string, voiceOptions: VoiceGenerationOptions) {
     const language = this.mapAccent(voiceOptions.options.accent);
-    const endpoint = `https://api.deepgram.com/v1/speak`; // Correct endpoint
+    const endpoint = `https://api.deepgram.com/v1/speak`;
 
     try {
       console.log(`Generating TTS with Deepgram:`, { text, language });
@@ -35,7 +35,7 @@ export class DeepgramVoiceProvider implements VoiceGenerationProvider {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          text // Only specify the `text` field
+          text
         })
       });
 
@@ -49,8 +49,8 @@ export class DeepgramVoiceProvider implements VoiceGenerationProvider {
         throw new Error(`Deepgram API error: ${responseText}`);
       }
 
-      const audioBuffer = await response.arrayBuffer(); // Read response as binary data
-      const base64Audio = Buffer.from(audioBuffer).toString('base64'); // Convert to Base64
+      const audioBuffer = await response.arrayBuffer();
+      const base64Audio = Buffer.from(audioBuffer).toString('base64');
 
       console.log('Deepgram TTS generation successful');
       return {

@@ -56,10 +56,8 @@ export class HuggingFaceProvider implements ImageGenerationProvider {
         throw new Error(`HuggingFace API error: ${error}`);
       }
 
-      // Get the image data as a Buffer
       const imageBuffer = await response.arrayBuffer();
 
-      // Convert Buffer to base64
       const base64Image = Buffer.from(imageBuffer).toString('base64');
       const imageUrl = `data:image/jpeg;base64,${base64Image}`;
 
@@ -70,7 +68,6 @@ export class HuggingFaceProvider implements ImageGenerationProvider {
     }
   }
 
-  // Optional: Add a method to check model loading status
   async checkModelStatus(): Promise<boolean> {
     try {
       const response = await fetch(`${this.baseUrl}/${this.modelId}`, {

@@ -1,5 +1,3 @@
-// src/constants/huggingface-models.ts
-
 export const HUGGINGFACE_MODELS = {
   SDXL: {
     MODEL_ID: "stabilityai/stable-diffusion-xl-base-1.0",

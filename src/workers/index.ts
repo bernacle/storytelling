@@ -1,10 +1,8 @@
-// src/workers/index.ts
 import { makeImageWorker } from "@/modules/images/workers/factories/make-image-worker"
 import { makeVoiceWorker } from "@/modules/voices/workers/factories/make-voice-worker"
 
 
 async function startWorkers() {
-  // Start Voice Worker
   const voiceWorker = makeVoiceWorker()
 
   voiceWorker.on('completed', (job) => {
@@ -18,7 +16,6 @@ async function startWorkers() {
     )
   })
 
-  // Start Image Worker
   const imageWorker = makeImageWorker()
 
   imageWorker.on('completed', (job) => {
@@ -34,7 +31,6 @@ async function startWorkers() {
 
   console.log('Workers started 🎙️ 🖼️')
 
-  // Handle graceful shutdown
   const shutdown = async () => {
     console.log('Shutting down workers...')
     await Promise.all([
