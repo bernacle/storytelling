@@ -1,9 +1,45 @@
-const emotionToVisualMap: Record<string, {
-  lighting: string;
-  colors: string;
-  composition: string;
-  additional?: string;
-}> = {
+type MoodStyle = {
+  baseLight: string
+  basePalette: string
+  composition: string
+  atmosphere: string
+}
+
+type EmotionAccent = {
+  lighting: string
+  colors: string
+  composition: string
+  additional?: string
+}
+
+const moodStyles: Record<string, MoodStyle> = {
+  dramatic: {
+    baseLight: 'high-contrast with deep shadows',
+    basePalette: 'rich saturated colors with deep blacks',
+    composition: 'dynamic and cinematic angles',
+    atmosphere: 'intense and impactful'
+  },
+  tense: {
+    baseLight: 'harsh shadows with stark contrast',
+    basePalette: 'cold undertones with bold accents',
+    composition: 'tight framing with dutch angles',
+    atmosphere: 'suspenseful and urgent'
+  },
+  mysterious: {
+    baseLight: 'diffused with selective highlights',
+    basePalette: 'muted with selective vibrance',
+    composition: 'revealing and concealing elements',
+    atmosphere: 'intriguing and secretive'
+  },
+  melancholic: {
+    baseLight: 'soft and diffused overall lighting',
+    basePalette: 'desaturated with subtle color accents',
+    composition: 'spacious with isolated elements',
+    atmosphere: 'contemplative and weighted'
+  }
+}
+
+const emotionAccents: Record<string, EmotionAccent> = {
   'joy': {
     lighting: 'bright and warm',
     colors: 'vibrant and uplifting',
@@ -148,32 +184,84 @@ const emotionToVisualMap: Record<string, {
     composition: 'heavy negative space',
     additional: 'elements of weight or descent'
   }
-};
-
+}
 
 export function createVisualPrompt(
   text: string,
-  emotion: string,
+  sceneEmotion: string,
   mood: string,
   style: 'REALISTIC' | 'CARTOON' | 'MINIMALISTIC'
 ): string {
-  const visuals = emotionToVisualMap[emotion.toLowerCase()] ?? {
-    lighting: 'balanced natural',
-    colors: 'true to scene',
-    composition: 'cinematically balanced',
-  };
+  const moodStyle = moodStyles[mood.toLowerCase()] || {
+    baseLight: 'balanced lighting',
+    basePalette: 'natural colors',
+    composition: 'standard framing',
+    atmosphere: 'neutral'
+  }
 
-  const styleModifier = {
-    'REALISTIC': 'photorealistic quality with natural textures and detailed lighting',
-    'CARTOON': 'bold outlines and simplified yet expressive shapes',
-    'MINIMALISTIC': 'essential elements only with strong use of negative space'
-  }[style];
+  const emotionAccent = emotionAccents[sceneEmotion.toLowerCase()] || {
+    lighting: 'neutral lighting',
+    colors: 'balanced colors',
+    composition: 'standard composition',
+  }
 
-  return `Create a ${style.toLowerCase()} scene that captures: "${text}".
-Mood is ${mood} with ${visuals.lighting} lighting.
-Use a palette of ${visuals.colors}.
-Frame the composition to be ${visuals.composition}.
-${visuals.additional ? `Incorporate ${visuals.additional}.` : ''}
-Style should be ${styleModifier}.
-Make it cinematically compelling.`;
+  const styleSpecs = {
+    'REALISTIC': {
+      primary: 'ultra-realistic photographic quality',
+      details: 'highly detailed photorealistic textures',
+      rendering: 'photoreal rendering like a high-end DSLR photograph',
+      reference: 'reference: professional photography, not digital art',
+      processing: 'natural photo processing, not artistic filters'
+    },
+    'CARTOON': {
+      primary: 'stylized animation style',
+      details: 'clean vector-like shapes and bold lines',
+      rendering: 'animated movie quality rendering',
+      reference: 'reference: high-end animated films',
+      processing: 'cartoon-appropriate color and shading'
+    },
+    'MINIMALISTIC': {
+      primary: 'simplified essential elements',
+      details: 'minimal detail with focus on core shapes',
+      rendering: 'clean geometric style',
+      reference: 'reference: minimalist design artwork',
+      processing: 'reduced color palette and basic forms'
+    }
+  }[style]
+
+  return `Create a scene in ${styleSpecs.primary} that captures: "${text}"
+
+STRICT STYLE ENFORCEMENT:
+- Primary Style: ${styleSpecs.primary}
+- Detail Level: ${styleSpecs.details}
+- Rendering: ${styleSpecs.rendering}
+- Reference Style: ${styleSpecs.reference}
+- Processing: ${styleSpecs.processing}
+
+Base Mood (Maintained Across Scenes):
+- Primary Lighting: ${moodStyle.baseLight}
+- Color Scheme: ${moodStyle.basePalette}
+- Overall Composition: ${moodStyle.composition}
+- Atmosphere: ${moodStyle.atmosphere}
+
+Scene-Specific Emotion:
+- Lighting Accent: ${emotionAccent.lighting}
+- Color Accent: ${emotionAccent.colors}
+- Dynamic Elements: ${emotionAccent.composition}
+${emotionAccent.additional ? `- Additional Focus: ${emotionAccent.additional}` : ''}
+
+Critical Requirements:
+1. MUST maintain ${style.toLowerCase()} style consistently
+2. NO mixing of styles (no cartoon elements in realistic mode)
+3. STRICT adherence to photorealism in REALISTIC mode
+4. Maintain exact same visual approach across all scenes
+5. Use consistent character and location representation
+6. Apply uniform post-processing across series
+
+Technical Consistency:
+- Camera: ${style === 'REALISTIC' ? 'photographic lens characteristics' : 'consistent viewpoint style'}
+- Detail: ${style === 'REALISTIC' ? 'photorealistic detail throughout' : 'consistent stylization'}
+- Color: professional color grading matching ${style.toLowerCase()} style
+- Quality: high-end ${style === 'REALISTIC' ? 'photography' : 'rendering'} quality
+- Continuity: maintain perfect style match between scenes`
 }

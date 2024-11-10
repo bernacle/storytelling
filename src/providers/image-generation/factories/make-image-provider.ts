@@ -7,7 +7,7 @@ import { env } from '@/env';
 
 export type ImageProviderType = 'replicate' | 'dalle' | 'huggingface';
 
-export interface ImageProviderConfig {
+export type ImageProviderConfig = {
   provider?: ImageProviderType;
   apiKey?: string;
   modelVersion?: string;

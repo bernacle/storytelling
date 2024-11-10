@@ -5,7 +5,7 @@ import type { Voice } from '@prisma/client';
 import type { AnalysisResponse } from '@/providers/text-analysis';
 import { ScriptNotFoundError } from '@/modules/scripts/use-cases/errors/script-not-found-error';
 
-export interface VoiceOptions {
+export type VoiceOptions = {
   gender?: 'male' | 'female';
   accent?: 'american' | 'british' | 'australian' | 'indian' | 'irish';
   ageGroup?: 'youth' | 'adult' | 'senior';

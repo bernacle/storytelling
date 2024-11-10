@@ -40,7 +40,6 @@ export function createImageWorker(
           sceneIndex
         })
 
-        // Add delay between requests to respect rate limits
         await enforceRateLimit()
 
         const result = await imageProvider.generate({
@@ -58,10 +57,9 @@ export function createImageWorker(
         })
       } catch (error) {
         if (isRateLimitError(error)) {
-          // If we hit rate limit, wait before retrying
           console.log('Rate limit hit, waiting before retry')
-          await new Promise(resolve => setTimeout(resolve, 60 * 1000)) // 1 minute delay
-          throw error // This will trigger the job retry
+          await new Promise(resolve => setTimeout(resolve, 60 * 1000))
+          throw error
         }
 
         console.error('Image generation error:', {
@@ -81,16 +79,15 @@ export function createImageWorker(
     },
     {
       connection,
-      concurrency: 2, // Reduced from 5 to stay under HuggingFace limits
+      concurrency: 2,
       limiter: {
-        max: 2, // Maximum 2 jobs per interval
-        duration: 1000 * 60 // 1 minute interval
+        max: 2,
+        duration: 1000 * 60
       }
     }
   )
 }
 
-// Track the last request time
 let lastRequestTime = 0
 const MIN_REQUEST_INTERVAL = 20 * 1000 // 20 seconds between requests
 

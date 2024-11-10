@@ -15,10 +15,10 @@ export async function create(
 
   const createImageUseCase = makeCreateImageUseCase()
 
-  const { image } = await createImageUseCase.execute({
+  const { images } = await createImageUseCase.execute({
     scriptId: script_id,
     style
   })
 
-  return reply.status(202).send({ image })
+  return reply.status(202).send({ images })
 }

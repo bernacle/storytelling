@@ -11,6 +11,25 @@ export class PrismaImagesRepository implements ImagesRepository {
     const image = await prisma.image.findUnique({ where: { id } });
     return image
   }
+
+  async findByScriptId(scriptId: string) {
+    return await prisma.image.findMany({
+      where: { script_id: scriptId },
+      orderBy: { scene_index: 'asc' }
+    })
+  }
+
+  async save(data: Image): Promise<Image> {
+    const image = await prisma.image.update({
+      where: {
+        id: data.id,
+      },
+      data,
+    })
+
+    return image
+  }
+
   async updateStatus(id: string, status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED", data?: Partial<Image>): Promise<Image> {
     return await prisma.image.update({
       where: { id },

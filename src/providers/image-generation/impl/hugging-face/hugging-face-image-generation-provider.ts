@@ -3,7 +3,7 @@ import type { ImageGenerationProvider } from "../../image-generation-provider";
 import type { ImageGenerationOptions, ImageGenerationResult } from "../../types";
 import { DEFAULT_MODEL } from "./constants";
 
-interface HuggingFaceConfig {
+type HuggingFaceConfig = {
   apiToken: string;
   modelId?: string;
   numInferenceSteps?: number;

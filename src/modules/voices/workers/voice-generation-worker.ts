@@ -38,7 +38,6 @@ export function createVoiceWorker(
         console.log('Generating voice with options:', voiceOptions)
         const analysis = script.analysis as AnalysisResponse
 
-        // Generate enhanced content with natural speech patterns
         const enhancedContent = generateEnhancedContent(script.content, analysis)
 
         const result = await voiceProvider.generate(

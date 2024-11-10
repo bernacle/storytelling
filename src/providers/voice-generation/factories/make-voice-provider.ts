@@ -5,7 +5,7 @@ import { DeepgramVoiceProvider } from '../impl/deepgram/deepgram-voice-generatio
 
 export type VoiceProviderType = 'deepgram' | 'playht'
 
-export interface VoiceProviderConfig {
+export type VoiceProviderConfig = {
   provider?: VoiceProviderType;
 }
 
