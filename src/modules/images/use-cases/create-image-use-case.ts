@@ -9,7 +9,6 @@ import { createVisualPrompt } from './helpers/emotion-to-visual-mapper';
 
 type CreateImageUseCaseRequest = {
   scriptId: string;
-  prompt: string;
   style: 'REALISTIC' | 'CARTOON' | 'MINIMALISTIC';
 }
 

@@ -3,16 +3,14 @@ import { PrismaImagesRepository } from "../../repositories/prisma/prisma-images-
 import { createImageWorker } from "../image-generation-worker"
 import { redis } from '@/lib/redis'
 import OpenAI from 'openai'
-import { DallEProvider } from "@/providers/image-generation/impl/dall-e-image-generation-provider"
+import { makeImageProvider } from "@/providers/image-generation/factories/make-image-provider"
 
 export function makeImageWorker() {
   const imagesRepository = new PrismaImagesRepository()
   const scriptsRepository = new PrismaScriptsRepository()
 
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-  })
-  const imageProvider = new DallEProvider(openai)
+
+  const imageProvider = makeImageProvider({ provider: 'huggingface' })
 
   return createImageWorker(
     redis,

@@ -1,6 +1,14 @@
+export type VoicePreference = {
+  gender?: 'male' | 'female';
+  accent?: 'american' | 'british' | 'australian' | 'indian' | 'irish';
+  ageGroup?: 'youth' | 'adult' | 'senior';
+  style?: 'narrative' | 'advertising' | 'gaming';
+}
+
+
 export type VoiceGenerationOptions = {
-  voiceId: string;
-  tone: string;
+  options: VoicePreference;
+  tone?: string;
   speed?: number;
 }
 

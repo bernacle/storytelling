@@ -56,7 +56,6 @@ model Script {
 
 model Voice {
   id         String        @id @default(uuid())
-  voice_type String
   tone       String
   status     RequestStatus @default(PENDING)
   audio_url  String?

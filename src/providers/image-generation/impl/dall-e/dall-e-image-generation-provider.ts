@@ -5,15 +5,12 @@ import type { ImageGenerationOptions, ImageGenerationResult } from '../types';
 export class DallEProvider implements ImageGenerationProvider {
   constructor(private readonly openai: OpenAI) { }
 
-  async generate({ prompt, style = 'realistic', size = '1024x1024' }: ImageGenerationOptions): Promise<ImageGenerationResult> {
+  async generate({ prompt, size = '1024x1024' }: ImageGenerationOptions): Promise<ImageGenerationResult> {
     try {
-      const enhancedPrompt = style
-        ? `Create a ${style} style image of: ${prompt}`
-        : prompt;
 
       const response = await this.openai.images.generate({
         model: "dall-e-3",
-        prompt: enhancedPrompt,
+        prompt,
         size: size,
         quality: "standard",
         n: 1,

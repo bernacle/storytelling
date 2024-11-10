@@ -5,11 +5,16 @@ import type { Voice } from '@prisma/client';
 import type { AnalysisResponse } from '@/providers/text-analysis';
 import { ScriptNotFoundError } from '@/modules/scripts/use-cases/errors/script-not-found-error';
 
+export interface VoiceOptions {
+  gender?: 'male' | 'female';
+  accent?: 'american' | 'british' | 'australian' | 'indian' | 'irish';
+  ageGroup?: 'youth' | 'adult' | 'senior';
+  style?: 'narrative' | 'advertising' | 'gaming';
+}
+
 type CreateVoiceUseCaseRequest = {
   scriptId: string,
-  voiceId: string,
-  toneInput?: string,
-  speed?: number,
+  options: VoiceOptions
 }
 
 type CreateVoiceUseCaseResponse = {
@@ -19,7 +24,7 @@ type CreateVoiceUseCaseResponse = {
 export class CreateVoiceUseCase {
   constructor(private readonly scriptsRepository: ScriptsRepository, private readonly voicesRepository: VoicesRepository, private voiceQueue: Queue) { }
 
-  async execute({ scriptId, voiceId, toneInput, speed }: CreateVoiceUseCaseRequest): Promise<CreateVoiceUseCaseResponse> {
+  async execute({ scriptId, options }: CreateVoiceUseCaseRequest): Promise<CreateVoiceUseCaseResponse> {
     const script = await this.scriptsRepository.findById(scriptId)
 
     if (!script) {
@@ -27,12 +32,11 @@ export class CreateVoiceUseCase {
     }
 
     const analysis = script.analysis as AnalysisResponse
-    const tone = toneInput || analysis.tone || 'neutral'
+    const tone = analysis.tone || 'neutral'
 
     const voice = await this.voicesRepository.create({
       script: { connect: { id: scriptId } },
       user: { connect: { id: script.user_id } },
-      voice_type: voiceId,
       status: 'PENDING',
       tone
     })
@@ -42,9 +46,8 @@ export class CreateVoiceUseCase {
       voiceId: voice.id,
       scriptId,
       voiceOptions: {
-        voiceId,
+        options,
         tone,
-        speed
       }
     }, {
       attempts: 3,

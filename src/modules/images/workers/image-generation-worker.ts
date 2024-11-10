@@ -22,23 +22,43 @@ export function createImageWorker(
   return new Worker<ImageGenerationJob>(
     'generate-image',
     async (job: Job) => {
-      const { imageId, imageOptions } = job.data
+      const { imageId, scriptId, imageOptions } = job.data
 
       try {
+        console.log(`Processing image generation for script ${scriptId}`)
+
         await imagesRepository.updateStatus(imageId, 'PROCESSING')
+
+        console.log('Generating image with options:', {
+          style: imageOptions.style,
+          promptLength: imageOptions.prompt.length
+        })
 
         const result = await imageProvider.generate({
           prompt: imageOptions.prompt,
           style: imageOptions.style.toLowerCase()
         })
 
+        console.log('Image generation successful:', {
+          imageId,
+          imageUrlLength: result.imageUrl.length
+        })
+
         await imagesRepository.updateStatus(imageId, 'COMPLETED', {
           image_url: result.imageUrl
         })
       } catch (error) {
+        console.error('Image generation error:', {
+          error: error instanceof Error ? error.stack : error,
+          imageId,
+          scriptId,
+          options: imageOptions
+        })
+
         await imagesRepository.updateStatus(imageId, 'FAILED', {
           error: error instanceof Error ? error.message : 'Unknown error'
         })
+
         throw error
       }
     },

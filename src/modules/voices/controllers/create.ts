@@ -4,17 +4,25 @@ import { z } from 'zod'
 
 export async function create(request: FastifyRequest, reply: FastifyReply) {
   const createVoiceSchema = z.object({
-    scriptId: z.string().uuid(),
-    voiceId: z.string(),
-    tone: z.string().optional(),
-    speed: z.number().min(0.5).max(2).optional(),
+    script_id: z.string().uuid(),
+    options: z.object({
+      gender: z.enum(['male', 'female']).optional(),
+      accent: z.enum(['american', 'british', 'australian', 'indian', 'irish']).optional(),
+      age_group: z.enum(['youth', 'adult', 'senior']).optional(),
+      style: z.enum(['narrative', 'advertising', 'gaming']).optional(),
+    }).default({})
   })
-  const { scriptId, voiceId, tone, speed } = createVoiceSchema.parse(request.body)
+  const { script_id, options } = createVoiceSchema.parse(request.body)
 
   const analyzeVoiceUseCase = makeCreateVoiceUseCase()
 
   const { voice } = await analyzeVoiceUseCase.execute({
-    scriptId, voiceId, toneInput: tone, speed,
+    scriptId: script_id, options: {
+      accent: options.accent,
+      gender: options.gender,
+      style: options.style,
+      ageGroup: options.age_group
+    }
   })
 
   return reply.status(202).send({ voice })
