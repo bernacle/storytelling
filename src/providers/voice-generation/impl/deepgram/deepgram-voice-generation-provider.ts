@@ -1,14 +1,7 @@
 import { env } from "@/env";
 import type { VoiceGenerationProvider } from '../../voice-generation-provider';
 import type { VoiceGenerationOptions } from '../../types';
-
-const accentMapping: Record<string, string> = {
-  american: 'en-US',
-  british: 'en-GB',
-  australian: 'en-AU',
-  indian: 'en-IN',
-  irish: 'en-IE'
-};
+import { accentVoiceMapping } from "./accent-voice-mapper";
 
 export class DeepgramVoiceProvider implements VoiceGenerationProvider {
   constructor() {
@@ -17,16 +10,23 @@ export class DeepgramVoiceProvider implements VoiceGenerationProvider {
     }
   }
 
-  private mapAccent(accent?: string): string {
-    return accent ? accentMapping[accent] || 'en-US' : 'en-US';
+  private getVoiceId(accent?: string, gender?: string): string {
+    const mappedAccent = accent || 'en-US';
+    const mappedGender = gender || 'male';
+
+    return accentVoiceMapping[mappedAccent]?.[mappedGender] || 'aura-orion-en';
   }
 
   async generate(text: string, voiceOptions: VoiceGenerationOptions) {
-    const language = this.mapAccent(voiceOptions.options.accent);
-    const endpoint = `https://api.deepgram.com/v1/speak`;
+    const voiceId = this.getVoiceId(voiceOptions.options.accent, voiceOptions.options.gender);
+
+
+    const endpoint = new URL(env.DEEPGRAM_URL);
+    endpoint.searchParams.append("model", voiceId);
+
 
     try {
-      console.log(`Generating TTS with Deepgram:`, { text, language });
+      console.log(`Generating TTS with Deepgram:`, { text, voiceId });
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -35,7 +35,7 @@ export class DeepgramVoiceProvider implements VoiceGenerationProvider {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          text
+          text,
         })
       });
 

@@ -7,14 +7,6 @@ export type VoiceProviderType = 'deepgram' | 'playht'
 
 export interface VoiceProviderConfig {
   provider?: VoiceProviderType;
-  apiKey?: string;
-  modelId?: string;
-  // Voice specific configurations
-  voiceId?: string;
-  stability?: number;
-  similarityBoost?: number;
-  style?: number;
-  speakerBoost?: boolean;
 }
 
 export class VoiceProviderError extends Error {
@@ -25,14 +17,6 @@ export class VoiceProviderError extends Error {
 }
 
 export function makeVoiceProvider(config?: VoiceProviderConfig): VoiceGenerationProvider {
-  const commonConfig = {
-    voiceId: config?.voiceId,
-    stability: config?.stability,
-    similarityBoost: config?.similarityBoost,
-    style: config?.style,
-    speakerBoost: config?.speakerBoost,
-  };
-
   switch (config?.provider) {
     case 'deepgram':
       return new DeepgramVoiceProvider();

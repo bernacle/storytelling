@@ -11,5 +11,4 @@ export type AnalysisResponse = {
 
 export type AnalysisRequest = {
   content: string
-  targetEmotion?: string
 }
