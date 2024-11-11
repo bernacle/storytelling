@@ -15,7 +15,7 @@ type ImageGenerationJob = {
 
 const QUEUE_NAME = 'generate-image'
 let lastRequestTime = 0
-const MIN_REQUEST_INTERVAL = 20 * 1000 // 20 seconds between requests
+const MIN_REQUEST_INTERVAL = 20 * 1000
 
 async function enforceRateLimit() {
   const now = Date.now()
@@ -108,18 +108,18 @@ export function createImageWorker(
     },
     {
       connection,
-      concurrency: 2,  // Process two jobs at once
+      concurrency: 2,
       removeOnComplete: { count: 100 },
       removeOnFail: { count: 100 },
       prefix: 'storytelling',
       limiter: {
-        max: 2,        // Allow 2 requests
-        duration: 1000 * 60  // Per minute
+        max: 2,
+        duration: 1000 * 60
       }
     }
   )
 
-  // Log events but keep it minimal
+
   worker.on('failed', (job, error) => {
     if (!isRateLimitError(error)) {
       console.error(`[Worker] Failed job ${job?.id}:`, error)

@@ -22,7 +22,6 @@ export class PrismaImagesRepository implements ImagesRepository {
 
   async save(data: Image): Promise<Image> {
     try {
-      // First check if the image exists
       const exists = await this.findById(data.id);
       if (!exists) {
         throw new Error(`Image with ID ${data.id} not found`);
@@ -36,7 +35,7 @@ export class PrismaImagesRepository implements ImagesRepository {
           status: data.status,
           image_url: data.image_url,
           error: data.error,
-          updated_at: new Date(), // Ensure we update the timestamp
+          updated_at: new Date(),
         },
       });
 
@@ -53,7 +52,6 @@ export class PrismaImagesRepository implements ImagesRepository {
     data?: Partial<Image>
   ): Promise<Image> {
     try {
-      // First check if the image exists
       const exists = await this.findById(id);
       if (!exists) {
         throw new Error(`Image with ID ${id} not found`);
@@ -64,7 +62,7 @@ export class PrismaImagesRepository implements ImagesRepository {
         data: {
           status,
           ...(data || {}),
-          updated_at: new Date(), // Ensure we update the timestamp
+          updated_at: new Date(),
         }
       });
     } catch (error) {
