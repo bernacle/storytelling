@@ -18,3 +18,9 @@ export const HUGGINGFACE_MODELS = {
 } as const;
 
 export const DEFAULT_MODEL = HUGGINGFACE_MODELS.SDXL;
+
+export const VIDEO_FORMATS = {
+  vertical: '1080x1920',  // For Reels/TikTok (9:16)
+  horizontal: '1920x1080' // For YouTube (16:9)
+} as const;
+

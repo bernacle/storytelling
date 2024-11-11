@@ -10,10 +10,6 @@ export type ImageProviderType = 'replicate' | 'dalle' | 'huggingface';
 export type ImageProviderConfig = {
   provider?: ImageProviderType;
   apiKey?: string;
-  modelVersion?: string;
-  numInferenceSteps?: number;
-  guidanceScale?: number;
-  negativePrompt?: string;
 }
 
 export class ImageProviderError extends Error {
@@ -25,20 +21,10 @@ export class ImageProviderError extends Error {
 
 export function makeImageProvider(config?: ImageProviderConfig): ImageGenerationProvider {
 
-  const commonConfig = {
-    numInferenceSteps: config?.numInferenceSteps,
-    guidanceScale: config?.guidanceScale,
-    negativePrompt: config?.negativePrompt,
-  };
-
-
-
   switch (config?.provider) {
     case 'huggingface':
       return new HuggingFaceProvider({
         apiToken: env.HUGGINGFACE_API_TOKEN as string,
-        modelId: HUGGINGFACE_MODELS.SDXL.MODEL_ID,
-        ...commonConfig
       });
 
     case 'dalle':

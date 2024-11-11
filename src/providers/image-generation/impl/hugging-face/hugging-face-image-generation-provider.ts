@@ -1,7 +1,7 @@
 import { env } from "@/env";
 import type { ImageGenerationProvider } from "../../image-generation-provider";
 import type { ImageGenerationOptions, ImageGenerationResult } from "../../types";
-import { DEFAULT_MODEL } from "./constants";
+import { DEFAULT_MODEL, VIDEO_FORMATS } from "./constants";
 
 type HuggingFaceConfig = {
   apiToken: string;
@@ -28,9 +28,11 @@ export class HuggingFaceProvider implements ImageGenerationProvider {
     };
   }
 
-  async generate({ prompt, size = '1024x1024' }: ImageGenerationOptions): Promise<ImageGenerationResult> {
+  async generate({ prompt, orientation = 'vertical' }: ImageGenerationOptions): Promise<ImageGenerationResult> {
     try {
-      const [width, height] = size.split('x').map(Number);
+      const [width, height] = VIDEO_FORMATS[orientation].split('x').map(Number);
+
+
 
       const response = await fetch(`${this.baseUrl}/${this.modelId}`, {
         method: 'POST',

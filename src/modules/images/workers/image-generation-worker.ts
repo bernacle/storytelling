@@ -1,6 +1,5 @@
-import type { ScriptsRepository } from "@/modules/scripts/repositories/scripts-repository";
 import type { ImageGenerationProvider } from "@/providers/image-generation/image-generation-provider";
-import { ConnectionOptions, Job, Worker } from 'bullmq'
+import { Job, Worker } from 'bullmq'
 import type { ImagesRepository } from "../repositories/images-repository";
 import type * as IORedis from 'ioredis'
 
@@ -10,84 +9,11 @@ type ImageGenerationJob = {
   sceneIndex?: number;
   imageOptions: {
     prompt: string;
-    style: 'REALISTIC' | 'CARTOON' | 'MINIMALISTIC';
+    style: string;
   }
 }
 
-export function createImageWorker(
-  connection: IORedis.Redis | IORedis.Cluster,
-  imagesRepository: ImagesRepository,
-  scriptsRepository: ScriptsRepository,
-  imageProvider: ImageGenerationProvider,
-) {
-  return new Worker<ImageGenerationJob>(
-    'generate-image',
-    async (job: Job) => {
-      const { imageId, scriptId, sceneIndex, imageOptions } = job.data
-
-      try {
-        const logContext = sceneIndex !== undefined
-          ? `scene ${sceneIndex} of script ${scriptId}`
-          : `script ${scriptId}`
-
-        console.log(`Processing image generation for ${logContext}`)
-
-        await imagesRepository.updateStatus(imageId, 'PROCESSING')
-
-        console.log('Generating image with options:', {
-          style: imageOptions.style,
-          promptLength: imageOptions.prompt.length,
-          sceneIndex
-        })
-
-        await enforceRateLimit()
-
-        const result = await imageProvider.generate({
-          prompt: imageOptions.prompt,
-          style: imageOptions.style.toLowerCase()
-        })
-
-        console.log(`Image generation successful for ${logContext}:`, {
-          imageId,
-          imageUrlLength: result.imageUrl.length
-        })
-
-        await imagesRepository.updateStatus(imageId, 'COMPLETED', {
-          image_url: result.imageUrl
-        })
-      } catch (error) {
-        if (isRateLimitError(error)) {
-          console.log('Rate limit hit, waiting before retry')
-          await new Promise(resolve => setTimeout(resolve, 60 * 1000))
-          throw error
-        }
-
-        console.error('Image generation error:', {
-          error: error instanceof Error ? error.stack : error,
-          imageId,
-          scriptId,
-          sceneIndex,
-          options: imageOptions
-        })
-
-        await imagesRepository.updateStatus(imageId, 'FAILED', {
-          error: error instanceof Error ? error.message : 'Unknown error'
-        })
-
-        throw error
-      }
-    },
-    {
-      connection,
-      concurrency: 2,
-      limiter: {
-        max: 2,
-        duration: 1000 * 60
-      }
-    }
-  )
-}
-
+const QUEUE_NAME = 'generate-image'
 let lastRequestTime = 0
 const MIN_REQUEST_INTERVAL = 20 * 1000 // 20 seconds between requests
 
@@ -113,5 +39,92 @@ function isRateLimitError(error: unknown): boolean {
       errorMessage.includes('too many requests')
     )
   }
-  return false
+  return false;
+}
+
+export function createImageWorker(
+  connection: IORedis.Redis,
+  imagesRepository: ImagesRepository,
+  imageProvider: ImageGenerationProvider,
+) {
+  const worker = new Worker<ImageGenerationJob>(
+    QUEUE_NAME,
+    async (job: Job) => {
+      const { imageId, scriptId, sceneIndex, imageOptions } = job.data
+
+      const logContext = sceneIndex !== undefined
+        ? `scene ${sceneIndex} of script ${scriptId}`
+        : `script ${scriptId}`
+
+      console.log(`[Worker] Processing image generation for ${logContext}`)
+
+      try {
+        await imagesRepository.updateStatus(imageId, 'PROCESSING')
+
+        console.log('Generating image with options:', {
+          style: imageOptions.style,
+          promptLength: imageOptions.prompt.length,
+          sceneIndex
+        })
+
+        await enforceRateLimit()
+
+        const result = await imageProvider.generate({
+          prompt: imageOptions.prompt,
+          style: imageOptions.style
+        })
+
+        console.log(`Image generation successful for ${logContext}:`, {
+          imageId,
+          imageUrlLength: result.imageUrl.length
+        })
+
+        await imagesRepository.updateStatus(imageId, 'COMPLETED', {
+          image_url: result.imageUrl
+        })
+
+        return { success: true, imageUrl: result.imageUrl }
+      } catch (error) {
+        if (isRateLimitError(error)) {
+          console.log('Rate limit hit, waiting before retry')
+          await new Promise(resolve => setTimeout(resolve, 60 * 1000))
+          throw error
+        }
+
+        console.error('Image generation error:', {
+          error: error instanceof Error ? error.stack : error,
+          imageId,
+          scriptId,
+          sceneIndex,
+          options: imageOptions
+        })
+
+        await imagesRepository.updateStatus(imageId, 'FAILED', {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+
+        throw error
+      }
+    },
+    {
+      connection,
+      concurrency: 2,  // Process two jobs at once
+      removeOnComplete: { count: 100 },
+      removeOnFail: { count: 100 },
+      prefix: 'storytelling',
+      limiter: {
+        max: 2,        // Allow 2 requests
+        duration: 1000 * 60  // Per minute
+      }
+    }
+  )
+
+  // Log events but keep it minimal
+  worker.on('failed', (job, error) => {
+    if (!isRateLimitError(error)) {
+      console.error(`[Worker] Failed job ${job?.id}:`, error)
+    }
+  })
+
+  return worker
 }
