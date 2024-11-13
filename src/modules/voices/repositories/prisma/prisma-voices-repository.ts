@@ -9,6 +9,12 @@ export class PrismaVoicesRepository implements VoicesRepository {
     })
   }
 
+  async findByScriptId(scriptId: string) {
+    return await prisma.voice.findFirst({
+      where: { script_id: scriptId },
+    });
+  }
+
   async create(data: Prisma.VoiceCreateInput) {
     return await prisma.voice.create({
       data

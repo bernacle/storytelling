@@ -1,42 +1,38 @@
-import { makeImageWorker } from "@/modules/images/workers/factories/make-image-worker"
-import { makeVoiceWorker } from "@/modules/voices/workers/factories/make-voice-worker"
-
+import { voiceWorker, imageWorker, storyWorker, musicWorker } from "./initialize-workers"
 
 async function startWorkers() {
-  const voiceWorker = makeVoiceWorker()
-
   voiceWorker.on('completed', (job) => {
     console.log(`Voice generation completed for job ${job.id}`)
   })
-
-  voiceWorker.on('failed', (job, error) => {
-    console.error(
-      `Voice generation failed for job ${job?.id}:`,
-      error.message || error
-    )
-  })
-
-  const imageWorker = makeImageWorker()
 
   imageWorker.on('completed', (job) => {
     console.log(`Image generation completed for job ${job.id}`)
   })
 
-  imageWorker.on('failed', (job, error) => {
-    console.error(
-      `Image generation failed for job ${job?.id}:`,
-      error.message || error
-    )
+  storyWorker.on('completed', (job) => {
+    console.log(`Story generation completed for job ${job.id}`)
   })
 
-  console.log('Workers started 🎙️ 🖼️')
+  musicWorker.on('completed', (job) => {
+    console.log(`Music generation completed for job ${job.id}`)
+  })
+
+  // Error handlers
+  const workers = [voiceWorker, imageWorker, storyWorker, musicWorker]
+  workers.forEach(worker => {
+    worker.on('failed', (job, error) => {
+      console.error(
+        `Generation failed for job ${job?.id}:`,
+        error.message || error
+      )
+    })
+  })
+
+  console.log('Workers started 🎙️ 🖼️ 🎬')
 
   const shutdown = async () => {
     console.log('Shutting down workers...')
-    await Promise.all([
-      voiceWorker.close(),
-      imageWorker.close()
-    ])
+    await Promise.all(workers.map(worker => worker.close()))
     process.exit(0)
   }
 
