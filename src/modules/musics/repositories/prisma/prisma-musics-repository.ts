@@ -10,9 +10,9 @@ export class PrismaMusicsRepository implements MusicsRepository {
     });
   }
 
-  async findByStoryId(storyId: string): Promise<Music | null> {
+  async findByScriptId(scriptId: string): Promise<Music | null> {
     return await prisma.music.findFirst({
-      where: { story_id: storyId }
+      where: { script_id: scriptId }
     });
   }
 

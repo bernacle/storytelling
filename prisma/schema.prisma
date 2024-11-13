@@ -51,6 +51,7 @@ model Script {
   voices  Voice[]
   stories Story[]
   images  Image[]
+  musics  Music[]
 
   @@map("scripts")
 }
@@ -97,14 +98,14 @@ model Music {
   audio_url  String?
   status     RequestStatus @default(PENDING)
   error      String?
-  duration   Int
+  duration   Int?
   created_at DateTime      @default(now())
   updated_at DateTime      @updatedAt
 
-  user     User    @relation(fields: [user_id], references: [id])
-  user_id  String
-  story    Story?  @relation(fields: [story_id], references: [id])
-  story_id String?
+  user      User   @relation(fields: [user_id], references: [id])
+  user_id   String
+  script    Script @relation(fields: [script_id], references: [id])
+  script_id String
 
   @@map("musics")
 }
@@ -124,8 +125,6 @@ model Story {
   user_id   String
   script    Script @relation(fields: [script_id], references: [id])
   script_id String
-
-  musics Music[]
 
   @@map("stories")
 }

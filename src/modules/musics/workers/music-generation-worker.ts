@@ -13,23 +13,23 @@ type MusicGenerationJob = {
 export function createMusicWorker(
   connection: IORedis.Redis,
   musicsRepository: MusicsRepository,
-  musicsProvider: MusicGenerationProvider
+  musicProvider: MusicGenerationProvider
 ) {
   const worker = new Worker<MusicGenerationJob>(
     "generate-music",
     async (job: Job) => {
-      const { musicId, mood, duration } = job.data;
+      const { musicId, scriptId, mood, emotions } = job.data;
 
       try {
-        console.log(`Processing music generation for ${musicId}`);
+        console.log(`Processing music generation for script ${scriptId}`);
         await musicsRepository.updateStatus(musicId, "PROCESSING");
 
         console.log("Generating music with options:", {
           mood,
-          duration
+          emotionsCount: emotions.length
         });
 
-        const result = await musicsProvider.generate(mood, duration);
+        const result = await musicProvider.generate(mood, 30);
 
         console.log("Music generation successful:", {
           musicId,
@@ -45,8 +45,7 @@ export function createMusicWorker(
         console.error("Music generation error:", {
           error: error instanceof Error ? error.stack : error,
           musicId,
-          mood,
-          duration
+          scriptId
         });
 
         await musicsRepository.updateStatus(musicId, "FAILED", {
@@ -75,3 +74,4 @@ export function createMusicWorker(
 
   return worker;
 }
+

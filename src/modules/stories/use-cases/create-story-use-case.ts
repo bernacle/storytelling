@@ -8,6 +8,7 @@ import type { Queue } from 'bullmq';
 import type { Story, Style, MusicMood, RequestStatus } from '@prisma/client';
 import { ScriptNotFoundError } from '@/modules/scripts/use-cases/errors/script-not-found-error';
 import type { AnalysisResponse } from '@/providers/text-analysis';
+import type { MusicsRepository } from '@/modules/musics/repositories/musics-repository';
 
 type CreateStoryUseCaseRequest = {
   scriptId: string;
@@ -27,6 +28,7 @@ export class CreateStoryUseCase {
     private readonly voicesRepository: VoicesRepository,
     private readonly imagesRepository: ImagesRepository,
     private readonly storiesRepository: StoriesRepository,
+    private readonly musicsRepository: MusicsRepository,
     private readonly createVoiceUseCase: CreateVoiceUseCase,
     private readonly createImageUseCase: CreateImageUseCase,
     private readonly storyQueue: Queue,
@@ -65,39 +67,47 @@ export class CreateStoryUseCase {
   private async waitForAssets(scriptId: string, maxAttempts = 60, intervalMs = 2000): Promise<{
     voice: { audio_url: string; status: RequestStatus } | null;
     images: Array<{ image_url: string | null; status: RequestStatus; scene_index: number | null }>;
+    music: { audio_url: string; status: RequestStatus } | null;
   }> {
     let attempts = 0;
 
     while (attempts < maxAttempts) {
       const voice = await this.voicesRepository.findByScriptId(scriptId);
       const images = await this.imagesRepository.findByScriptId(scriptId);
+      const music = await this.musicsRepository.findByScriptId(scriptId);
 
       const voiceReady = voice?.status === 'COMPLETED' && voice.audio_url;
       const imagesReady = images.length > 0 &&
         images.every(img => img.status === 'COMPLETED' && img.image_url);
+      const musicReady = music?.status === 'COMPLETED' && music.audio_url;
 
-      if (voiceReady && imagesReady) {
-        // Transform the voice object to ensure audio_url is non-null
+      if (voiceReady && imagesReady && musicReady) {
         return {
           voice: voice.audio_url ? {
             audio_url: voice.audio_url,
             status: voice.status
           } : null,
-          images
+          images,
+          music: music.audio_url ? {
+            audio_url: music.audio_url,
+            status: music.status
+          } : null
         };
       }
 
       // Check for failures
-      if (voice?.status === 'FAILED' || images.some(img => img.status === 'FAILED')) {
+      if (voice?.status === 'FAILED' ||
+        images.some(img => img.status === 'FAILED') ||
+        music?.status === 'FAILED') {
         const errors = [];
         if (voice?.status === 'FAILED') errors.push(`Voice failed: ${voice.error}`);
+        if (music?.status === 'FAILED') errors.push(`Music failed: ${music.error}`);
         images.filter(img => img.status === 'FAILED')
           .forEach(img => errors.push(`Image ${img.scene_index} failed: ${img.error}`));
 
         throw new Error(`Asset generation failed: ${errors.join(', ')}`);
       }
 
-      console.log(`Waiting for assets... Voice: ${voice?.status}, Images: ${images.map(img => img.status).join(',')}`);
       await new Promise(resolve => setTimeout(resolve, intervalMs));
       attempts++;
     }
