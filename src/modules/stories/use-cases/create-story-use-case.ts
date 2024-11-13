@@ -1,14 +1,14 @@
-import type { StoriesRepository } from '../repositories/stories-repository';
-import type { ScriptsRepository } from '@/modules/scripts/repositories/scripts-repository';
-import type { VoicesRepository } from '@/modules/voices/repositories/voices-repository';
 import type { ImagesRepository } from '@/modules/images/repositories/images-repository';
-import { CreateVoiceUseCase } from '@/modules/voices/use-cases/create-voice-use-case';
 import { CreateImageUseCase } from '@/modules/images/use-cases/create-image-use-case';
-import type { Queue } from 'bullmq';
-import type { Story, Style, MusicMood, RequestStatus } from '@prisma/client';
-import { ScriptNotFoundError } from '@/modules/scripts/use-cases/errors/script-not-found-error';
-import type { AnalysisResponse } from '@/providers/text-analysis';
 import type { MusicsRepository } from '@/modules/musics/repositories/musics-repository';
+import type { ScriptsRepository } from '@/modules/scripts/repositories/scripts-repository';
+import { ScriptNotFoundError } from '@/modules/scripts/use-cases/errors/script-not-found-error';
+import type { VoicesRepository } from '@/modules/voices/repositories/voices-repository';
+import { CreateVoiceUseCase } from '@/modules/voices/use-cases/create-voice-use-case';
+import type { AnalysisResponse } from '@/providers/text-analysis';
+import type { MusicMood, RequestStatus, Story, Style } from '@prisma/client';
+import type { Queue } from 'bullmq';
+import type { StoriesRepository } from '../repositories/stories-repository';
 
 type CreateStoryUseCaseRequest = {
   scriptId: string;
@@ -129,13 +129,11 @@ export class CreateStoryUseCase {
 
     const analysis = script.analysis as AnalysisResponse;
 
-    // Start asset generation if needed
     const [voice, images] = await Promise.all([
       this.ensureVoiceExists(scriptId, voiceOptions),
       this.ensureImagesExist(scriptId, style)
     ]);
 
-    // Create initial story record
     const story = await this.storiesRepository.create({
       script: { connect: { id: scriptId } },
       user: { connect: { id: script.user_id } },
@@ -145,7 +143,6 @@ export class CreateStoryUseCase {
       image_urls: images.map(img => img.image_url)
     });
 
-    // Start waiting for assets in the background
     this.waitForAssets(scriptId)
       .then(async ({ voice, images }) => {
         if (!voice?.audio_url) {
@@ -156,7 +153,6 @@ export class CreateStoryUseCase {
           (a.scene_index ?? 0) - (b.scene_index ?? 0)
         );
 
-        // Add video generation job to queue
         await this.storyQueue.add('generate-story', {
           storyId: story.id,
           scriptId,

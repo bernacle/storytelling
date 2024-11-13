@@ -30,7 +30,6 @@ export class CreateMusicUseCase {
 
     const analysis = script.analysis as AnalysisResponse;
 
-    // Extract emotions and determine music mood
     const emotions = extractEmotions(analysis);
     const mood = createMusicMood(
       emotions,
@@ -38,7 +37,6 @@ export class CreateMusicUseCase {
       analysis.tone || 'neutral'
     );
 
-    // Create music record
     const music = await this.musicsRepository.create({
       mood,
       status: 'PENDING',

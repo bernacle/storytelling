@@ -1,9 +1,9 @@
-import { Job, Worker } from 'bullmq';
-import type { StoriesRepository } from '../repositories/stories-repository';
-import type { VideoGenerationProvider } from '@/providers/video-generation/video-generation-provider';
-import type * as IORedis from 'ioredis';
 import type { AnalysisResponse } from '@/providers/text-analysis';
+import type { VideoGenerationProvider } from '@/providers/video-generation/video-generation-provider';
 import type { MusicMood, Style } from '@prisma/client';
+import { Job, Worker } from 'bullmq';
+import type * as IORedis from 'ioredis';
+import type { StoriesRepository } from '../repositories/stories-repository';
 
 type StoryGenerationJob = {
   storyId: string;
@@ -28,7 +28,6 @@ export function createStoryWorker(
       try {
         console.log('Starting video generation for story:', storyId);
 
-        // Calculate scene durations if not provided
         const composition = {
           audio: {
             url: voiceUrl,
@@ -82,13 +81,13 @@ export function createStoryWorker(
     },
     {
       connection,
-      concurrency: 1, // Video generation is resource-intensive
+      concurrency: 1,
       removeOnComplete: { count: 100 },
       removeOnFail: { count: 100 },
       prefix: 'storytelling',
       limiter: {
         max: 1,
-        duration: 1000 * 60 * 5 // 5 minutes
+        duration: 1000 * 60 * 5
       }
     }
   );
