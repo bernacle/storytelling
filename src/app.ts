@@ -8,6 +8,7 @@ import { apiKeyRoutes } from '@/modules/api-keys/controllers/routes';
 import { checkApiKey } from './hooks/check-api-key';
 import { voicesRoutes } from './modules/voices/controllers/routes';
 import { imagesRoutes } from './modules/images/controllers/routes';
+import { musicsRoutes } from './modules/musics/controllers/routes';
 
 export const app = fastify()
 
@@ -24,6 +25,7 @@ app.register(async function protectedRoutes(app) {
   app.register(scriptRoutes)
   app.register(voicesRoutes)
   app.register(imagesRoutes)
+  app.register(musicsRoutes)
 })
 
 

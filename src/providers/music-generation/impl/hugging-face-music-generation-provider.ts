@@ -18,34 +18,27 @@ export class HuggingFaceMusicProvider implements MusicGenerationProvider {
   private readonly apiToken: string;
   private readonly modelId: string;
   private readonly baseUrl = env.HUGGINGFACE_API_URL;
-  private readonly config: Omit<HuggingFaceConfig, 'apiToken' | 'modelId'>;
 
-  constructor(config: HuggingFaceConfig) {
+  constructor(config: { apiToken: string; modelId?: string }) {
     this.apiToken = config.apiToken;
-    this.modelId = config.modelId ?? DEFAULT_MODEL.MODEL_ID;
-
-    this.config = {
-      duration: config.duration ?? 30,
-      temperature: config.temperature ?? 1,
-      topK: config.topK ?? 250,
-      topP: config.topP ?? 0,
-      guidanceScale: config.guidanceScale ?? 3,
-    };
+    this.modelId = DEFAULT_MODEL.MODEL_ID;
   }
 
   private getMoodPrompt(mood: MusicMood): string {
     const moodPrompts = {
-      'UPBEAT': 'Create an upbeat and energetic background music with a positive vibe, suitable for storytelling. Modern electronic pop style, inspiring and motivational.',
-      'DRAMATIC': 'Create a dramatic and emotional background music with cinematic feel, suitable for storytelling. Orchestral elements with building tension and resolution.',
-      'CALM': 'Create a calm and soothing background music with peaceful atmosphere, suitable for storytelling. Soft ambient sounds with gentle melody.'
+      'UPBEAT': 'An upbeat and energetic electronic pop music with a positive vibe. The melody is catchy and inspiring.',
+      'DRAMATIC': 'A dramatic orchestral piece with deep emotions and building tension. The music is powerful and intense.',
+      'CALM': 'A calm and peaceful ambient music with soft melodies and gentle sounds. The atmosphere is soothing and relaxing.'
     };
 
     return moodPrompts[mood];
   }
 
-  async generate(mood: MusicMood, durationSeconds: number): Promise<{ audioUrl: string }> {
+  async generate(mood: MusicMood): Promise<{ audioUrl: string }> {
     try {
       const prompt = this.getMoodPrompt(mood);
+
+      console.log('Generating music with prompt:', prompt);
 
       const response = await fetch(`${this.baseUrl}/${this.modelId}`, {
         method: 'POST',
@@ -55,18 +48,12 @@ export class HuggingFaceMusicProvider implements MusicGenerationProvider {
         },
         body: JSON.stringify({
           inputs: prompt,
-          parameters: {
-            duration: durationSeconds,
-            temperature: this.config.temperature,
-            top_k: this.config.topK,
-            top_p: this.config.topP,
-            guidance_scale: this.config.guidanceScale,
-          }
         }),
       });
 
       if (!response.ok) {
         const error = await response.text();
+        console.error('HuggingFace API error response:', error);
         throw new Error(`HuggingFace API error: ${error}`);
       }
 
@@ -76,24 +63,8 @@ export class HuggingFaceMusicProvider implements MusicGenerationProvider {
 
       return { audioUrl };
     } catch (error) {
-      console.error('HuggingFace music generation error:', error);
+      console.error('Music generation error:', error);
       throw error;
-    }
-  }
-
-  async checkModelStatus(): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.baseUrl}/${this.modelId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.apiToken}`,
-        },
-      });
-
-      const result = await response.json();
-      return !result.error;
-    } catch {
-      return false;
     }
   }
 }
