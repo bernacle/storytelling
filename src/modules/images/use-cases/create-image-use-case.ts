@@ -1,11 +1,12 @@
 import type { ScriptsRepository } from '@/modules/scripts/repositories/scripts-repository';
-import { Image, Prisma, type Script } from '@prisma/client'
-import type { ImagesRepository } from '../repositories/images-repository';
-import type { Queue } from 'bullmq';
+import { ScenesNotFoundInScriptError } from '@/modules/scripts/use-cases/errors/scenes-not-found-in-script-error';
 import { ScriptNotFoundError } from '@/modules/scripts/use-cases/errors/script-not-found-error';
 import type { AnalysisResponse } from '@/providers/text-analysis';
+import { Image } from '@prisma/client';
+import type { Queue } from 'bullmq';
+import type { ImagesRepository } from '../repositories/images-repository';
+import { PRO_SETTINGS } from '../workers/image-generation-worker';
 import { createVisualPrompt } from './helpers/emotion-to-visual-mapper';
-import { ScenesNotFoundInScriptError } from '@/modules/scripts/use-cases/errors/scenes-not-found-in-script-error';
 
 type CreateImageUseCaseRequest = {
   scriptId: string;
@@ -66,27 +67,21 @@ export class CreateImageUseCase {
         });
       }
 
-      await this.imageQueue.add(
-        'generate-image',
-        {
-          imageId: image.id,
-          scriptId,
-          sceneIndex,
-          imageOptions: {
-            prompt,
-            style: style.toLowerCase(),
-          }
-        },
-        {
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 1000,
-          },
-          removeOnComplete: true,
-          removeOnFail: false,
+      await this.imageQueue.add('generate-image', {
+        imageId: image.id,
+        scriptId,
+        sceneIndex,
+        imageOptions: {
+          prompt,
+          style
         }
-      );
+      }, {
+        attempts: PRO_SETTINGS.maxRetries,
+        backoff: {
+          type: 'exponential',
+          delay: PRO_SETTINGS.retryDelay
+        }
+      });
 
       return image;
     } catch (error) {

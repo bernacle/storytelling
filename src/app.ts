@@ -1,14 +1,15 @@
-import fastify from 'fastify'
-import { ZodError } from 'zod'
-import { env } from './env'
+import fastify from 'fastify';
+import { ZodError } from 'zod';
+import { env } from './env';
 
-import { userRoutes } from '@/modules/users/controllers/routes';
-import { scriptRoutes } from '@/modules/scripts/controllers/routes';
 import { apiKeyRoutes } from '@/modules/api-keys/controllers/routes';
+import { scriptRoutes } from '@/modules/scripts/controllers/routes';
+import { userRoutes } from '@/modules/users/controllers/routes';
 import { checkApiKey } from './hooks/check-api-key';
-import { voicesRoutes } from './modules/voices/controllers/routes';
 import { imagesRoutes } from './modules/images/controllers/routes';
 import { musicsRoutes } from './modules/musics/controllers/routes';
+import { storiesRoutes } from './modules/stories/controllers/routes';
+import { voicesRoutes } from './modules/voices/controllers/routes';
 
 export const app = fastify()
 
@@ -26,6 +27,7 @@ app.register(async function protectedRoutes(app) {
   app.register(voicesRoutes)
   app.register(imagesRoutes)
   app.register(musicsRoutes)
+  app.register(storiesRoutes)
 })
 
 

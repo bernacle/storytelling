@@ -1,8 +1,9 @@
 import ffmpeg from 'fluent-ffmpeg';
-import { promisify } from 'util';
 import fs from 'fs';
-import path from 'path';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
+import path from 'path';
+import { promisify } from 'util';
+import type { VideoComposition, VideoGenerationResult } from '../types';
 import type { VideoGenerationProvider } from '../video-generation-provider';
 
 const writeFile = promisify(fs.writeFile);
@@ -13,29 +14,37 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
   constructor(
     private readonly tempDir: string,
     private readonly outputDir: string,
-    private readonly musicLibraryPath: string,
-  ) { }
+  ) {
+    // Check if directories exist
+    if (!fs.existsSync(tempDir)) {
+      throw new Error(`Temp directory not found: ${tempDir}`);
+    }
+    if (!fs.existsSync(outputDir)) {
+      throw new Error(`Output directory not found: ${outputDir}`);
+    }
+
+    // Check FFmpeg
+    try {
+      ffmpeg.getAvailableCodecs((err, _codecs) => {
+        if (err) {
+          throw new Error('FFmpeg not properly configured');
+        }
+      });
+    } catch (error) {
+      console.error('FFmpeg initialization error:', error);
+      console.log('Please ensure FFmpeg is installed. On macOS, run: brew install ffmpeg');
+      throw new Error('FFmpeg not found. Please install FFmpeg before running the application.');
+    }
+  }
 
   private async saveBase64File(base64Data: string, outputPath: string): Promise<void> {
     try {
-      // Remove data URL prefix if present
       const base64Content = base64Data.replace(/^data:([a-zA-Z\/]+);base64,/, '');
       const fileBuffer = Buffer.from(base64Content, 'base64');
       await writeFile(outputPath, fileBuffer);
     } catch (error) {
       throw new Error(`Failed to save base64 file to ${path.basename(outputPath)}: ${error}`);
     }
-  }
-
-  private getMusicTrackByMood(mood: string): string {
-    const moodToMusic = {
-      'UPBEAT': 'upbeat-background.mp3',
-      'DRAMATIC': 'dramatic-background.mp3',
-      'CALM': 'calm-background.mp3',
-    };
-
-    const musicFile = moodToMusic[mood as keyof typeof moodToMusic] || 'calm-background.mp3';
-    return path.join(this.musicLibraryPath, musicFile);
   }
 
   private async createSegmentedVideo(
@@ -48,14 +57,12 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
     return new Promise((resolve, reject) => {
       let command = ffmpeg();
 
-      // Add each image input with its duration
       imagePaths.forEach(imagePath => {
         command = command
           .input(imagePath)
           .inputOptions(['-loop 1'])
       });
 
-      // Create filter complex for crossfading between images
       const filters: string[] = [];
 
       imagePaths.forEach((_, i) => {
@@ -103,25 +110,20 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
     });
   }
 
-
-  async generate(composition: VideoComposition): Promise<{ videoUrl: string }> {
+  async generate(composition: VideoComposition): Promise<VideoGenerationResult> {
     const sessionId = Date.now().toString();
     const workDir = path.join(this.tempDir, sessionId);
 
     try {
-      // Create working directory
       await mkdir(workDir, { recursive: true });
 
-      // Save narration from base64
       console.log('Saving narration...');
       const narrationPath = path.join(workDir, 'narration.mp3');
       await this.saveBase64File(composition.audio.url, narrationPath);
 
-      // Get narration duration
       const audioDuration = await getAudioDurationInSeconds(narrationPath);
       console.log(`Narration duration: ${audioDuration} seconds`);
 
-      // Save images from base64
       console.log('Saving images...');
       const imagePaths = await Promise.all(
         composition.scenes.map(async (scene, i) => {
@@ -131,7 +133,6 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
         })
       );
 
-      // Create base video with images
       console.log('Creating base video...');
       const baseVideoPath = path.join(workDir, 'base_video.mp4');
       await this.createSegmentedVideo(
@@ -140,28 +141,41 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
         baseVideoPath
       );
 
-      // Get background music
-      const musicTrack = this.getMusicTrackByMood(composition.music.mood);
+      // Handle music - check if URL is provided
+      const musicPath = path.join(workDir, 'background_music.mp3');
+      if (composition.music.url) {
+        console.log('Saving background music...');
+        await this.saveBase64File(composition.music.url, musicPath);
+      }
 
-      // Final output path
       const outputFileName = `story_${sessionId}.mp4`;
       const outputPath = path.join(this.outputDir, outputFileName);
 
-      // Combine video with audio tracks
       console.log('Adding audio tracks...');
       await new Promise((resolve, reject) => {
-        ffmpeg()
+        let command = ffmpeg()
           .input(baseVideoPath)
-          .input(narrationPath)
-          .input(musicTrack)
-          .complexFilter([
+          .input(narrationPath);
+
+        // Only add music input if URL was provided
+        if (composition.music.url) {
+          command = command.input(musicPath);
+        }
+
+        // Adjust complex filter based on whether we have music
+        const complexFilter = composition.music.url
+          ? [
             `[2:a]volume=${composition.music.volume}[music]`,
             '[1:a][music]amix=inputs=2:duration=first[audio]'
-          ])
+          ]
+          : [];
+
+        command
+          .complexFilter(complexFilter)
           .outputOptions([
             '-c:v copy',
             '-map 0:v',
-            '-map [audio]',
+            composition.music.url ? '-map [audio]' : '-map 1:a',
             '-shortest'
           ])
           .on('start', (commandLine) => {
@@ -178,41 +192,16 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
           });
       });
 
-      // Convert final video to base64 if needed
-      // const finalVideoBase64 = await fs.promises.readFile(outputPath, { encoding: 'base64' });
-
-      // Clean up
       await rm(workDir, { recursive: true, force: true });
 
-      // Return public URL (adjust based on your server setup)
       return {
         videoUrl: `/stories/${outputFileName}`
       };
     } catch (error) {
-      // Clean up on error
       await rm(workDir, { recursive: true, force: true })
         .catch(err => console.error('Cleanup error during error handling:', err));
 
       throw new Error(`Video generation failed: ${error}`);
     }
   }
-}
-
-// Update the interface to reflect base64 usage
-export interface VideoComposition {
-  audio: {
-    url: string; // base64 string
-    type: string;
-  };
-  scenes: Array<{
-    image: string; // base64 string
-    duration: number;
-    transition: string;
-    transitionDuration: number;
-  }>;
-  style: string;
-  music: {
-    mood: string;
-    volume: number;
-  };
 }

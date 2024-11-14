@@ -1,5 +1,5 @@
-import { Queue } from 'bullmq';
 import { redis } from '@/lib/redis';
+import { Queue } from 'bullmq';
 
 const RATE_LIMIT_DELAY = 60 * 1000;
 
@@ -30,6 +30,20 @@ export const musicQueue = new Queue('generate-music', {
   prefix: 'storytelling',
   defaultJobOptions: {
     attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: RATE_LIMIT_DELAY
+    },
+    removeOnComplete: { count: 100 },
+    removeOnFail: { count: 100 }
+  }
+});
+
+export const storyQueue = new Queue('generate-story', {
+  connection: redis,
+  prefix: 'storytelling',
+  defaultJobOptions: {
+    attempts: 2,
     backoff: {
       type: 'exponential',
       delay: RATE_LIMIT_DELAY

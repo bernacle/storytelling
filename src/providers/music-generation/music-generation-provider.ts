@@ -1,5 +1,5 @@
-import type { MusicMood } from "@prisma/client";
+import type { MusicGenerationOptions, MusicGenerationResult } from "./types";
 
 export interface MusicGenerationProvider {
-  generate(mood: MusicMood, durationSeconds: number): Promise<{ audioUrl: string }>;
+  generate(options: MusicGenerationOptions): Promise<MusicGenerationResult>;
 }

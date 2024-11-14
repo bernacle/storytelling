@@ -6,4 +6,5 @@ export interface StoriesRepository {
   updateStatus(id: string,
     status: RequestStatus,
     data?: Prisma.StoryUpdateInput): Promise<Story>
+  update(id: string, data: Prisma.StoryUpdateInput): Promise<Story>
 }

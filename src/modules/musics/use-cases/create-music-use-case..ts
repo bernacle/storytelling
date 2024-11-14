@@ -1,13 +1,15 @@
-import type { MusicsRepository } from "../repositories/musics-repository";
 import type { ScriptsRepository } from "@/modules/scripts/repositories/scripts-repository";
-import type { Queue } from "bullmq";
-import type { Music, MusicMood } from "@prisma/client";
-import type { AnalysisResponse } from '@/providers/text-analysis';
 import { ScriptNotFoundError } from "@/modules/scripts/use-cases/errors/script-not-found-error";
-import { createMusicMood, extractEmotions, type EmotionIntensity } from "./helpers/emotion-to-music-mapper";
+import type { AnalysisResponse } from '@/providers/text-analysis';
+import type { Music, MusicMood } from "@prisma/client";
+import type { Queue } from "bullmq";
+import type { MusicsRepository } from "../repositories/musics-repository";
+import { createMusicMood, extractEmotions } from "./helpers/emotion-to-music-mapper";
 
 type CreateMusicUseCaseRequest = {
   scriptId: string;
+  userId: string;
+  musicMood?: MusicMood;
 }
 
 type CreateMusicUseCaseResponse = {
@@ -21,7 +23,7 @@ export class CreateMusicUseCase {
     private readonly musicQueue: Queue
   ) { }
 
-  async execute({ scriptId }: CreateMusicUseCaseRequest): Promise<CreateMusicUseCaseResponse> {
+  async execute({ scriptId, musicMood, userId }: CreateMusicUseCaseRequest): Promise<CreateMusicUseCaseResponse> {
     const script = await this.scriptsRepository.findById(scriptId);
 
     if (!script) {
@@ -31,7 +33,7 @@ export class CreateMusicUseCase {
     const analysis = script.analysis as AnalysisResponse;
 
     const emotions = extractEmotions(analysis);
-    const mood = createMusicMood(
+    const mood = musicMood ?? createMusicMood(
       emotions,
       analysis.mood || 'neutral',
       analysis.tone || 'neutral'
@@ -41,7 +43,7 @@ export class CreateMusicUseCase {
       mood,
       status: 'PENDING',
       script: { connect: { id: scriptId } },
-      user: { connect: { id: script.user_id } }
+      user: { connect: { id: userId } }
     });
 
     await this.musicQueue.add('generate-music', {

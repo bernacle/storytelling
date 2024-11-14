@@ -1,13 +1,14 @@
+import type { MusicGenerationProvider } from "@/providers/music-generation/music-generation-provider";
+import type { MusicMood } from "@prisma/client";
 import { Job, Worker } from "bullmq";
 import type * as IORedis from "ioredis";
-import type { MusicMood } from "@prisma/client";
 import type { MusicsRepository } from "../repositories/musics-repository";
-import type { MusicGenerationProvider } from "@/providers/music-generation/music-generation-provider";
 
 type MusicGenerationJob = {
   musicId: string;
+  scriptId: string;
   mood: MusicMood;
-  duration: number;
+  emotions: string[];
 };
 
 export function createMusicWorker(
@@ -17,7 +18,7 @@ export function createMusicWorker(
 ) {
   const worker = new Worker<MusicGenerationJob>(
     "generate-music",
-    async (job: Job) => {
+    async (job: Job<MusicGenerationJob>) => {
       const { musicId, scriptId, mood, emotions } = job.data;
 
       try {
@@ -29,18 +30,42 @@ export function createMusicWorker(
           emotionsCount: emotions.length
         });
 
-        const result = await musicProvider.generate(mood, 30);
+        let attempts = 0;
+        const maxAttempts = 3;
+        let lastError: Error | null = null;
 
-        console.log("Music generation successful:", {
-          musicId,
-          audioUrlLength: result.audioUrl.length
-        });
+        while (attempts < maxAttempts) {
+          try {
+            const result = await musicProvider.generate({
+              mood,
+              emotions,
+              duration: 30 // seconds
+            });
 
-        await musicsRepository.updateStatus(musicId, "COMPLETED", {
-          audio_url: result.audioUrl
-        });
+            console.log("Music generation successful:", {
+              musicId,
+              audioUrlLength: result.audioUrl.length
+            });
 
-        return { success: true, audioUrl: result.audioUrl };
+            await musicsRepository.updateStatus(musicId, "COMPLETED", {
+              audio_url: result.audioUrl
+            });
+
+            return { success: true, audioUrl: result.audioUrl };
+          } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+            attempts++;
+
+            if (attempts < maxAttempts) {
+              const delay = Math.pow(2, attempts) * 1000; // exponential backoff
+              console.log(`Music generation attempt ${attempts} failed, retrying in ${delay}ms`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+          }
+        }
+
+        // If we get here, all attempts failed
+        throw lastError;
       } catch (error) {
         console.error("Music generation error:", {
           error: error instanceof Error ? error.stack : error,
@@ -74,4 +99,3 @@ export function createMusicWorker(
 
   return worker;
 }
-

@@ -11,7 +11,7 @@ type CreateApiKeyUseCaseResponse = {
   apiKey: ApiKey
 }
 
-export class CreateUserUseCase {
+export class CreateApiKeyUseCase {
   constructor(private readonly apiKeysRepository: ApiKeysRepository) { }
 
   async execute({ label, userId }: CreateApiKeyUseCaseRequest): Promise<CreateApiKeyUseCaseResponse> {

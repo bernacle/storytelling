@@ -1,10 +1,10 @@
 export type VideoComposition = {
   audio: {
-    url: string;
+    url: string; // base64 string
     type: string;
   };
   scenes: Array<{
-    image: string;
+    image: string; // base64 string
     duration: number;
     transition: string;
     transitionDuration: number;
@@ -13,6 +13,7 @@ export type VideoComposition = {
   music: {
     mood: string;
     volume: number;
+    url?: string; // Optional for backward compatibility
   };
 }
 

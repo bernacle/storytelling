@@ -1,5 +1,5 @@
 import { makeCreateMusicUseCase } from '@/modules/musics/use-cases/factories/make-create-music-use-case'
-import { FastifyRequest, FastifyReply } from 'fastify'
+import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
 export async function create(
@@ -16,6 +16,7 @@ export async function create(
 
   const { music } = await createMusicUseCase.execute({
     scriptId: script_id,
+    userId: request.user.id,
   })
 
   return reply.status(202).send({ music })
