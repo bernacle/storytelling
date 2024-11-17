@@ -13,8 +13,9 @@ type StoryGenerationJob = {
   style: Style;
   musicMood: MusicMood;
   scenes: AnalysisResponse['scenes'];
+  musicUrl?: string;
+  musicVolume?: number;
 }
-
 // Helper function to calculate scene duration based on text length
 function calculateSceneDuration(text: string): number {
   // Average reading speed is about 150-160 words per minute
@@ -38,7 +39,7 @@ export function createStoryWorker(
   const worker = new Worker<StoryGenerationJob>(
     'generate-story',
     async (job: Job<StoryGenerationJob>) => {
-      const { storyId, scriptId, voiceUrl, imageUrls, style, musicMood, scenes } = job.data;
+      const { storyId, scriptId, voiceUrl, imageUrls, style, musicMood, scenes, musicUrl, musicVolume } = job.data;
 
       try {
         await storiesRepository.updateStatus(storyId, 'PROCESSING');
@@ -61,8 +62,9 @@ export function createStoryWorker(
           })),
           style,
           music: {
+            url: musicUrl,
             mood: musicMood,
-            volume: 0.2
+            volume: musicVolume || 0.4
           }
         };
 
@@ -72,7 +74,8 @@ export function createStoryWorker(
           storyId,
           numberOfScenes: scenes.length,
           style,
-          musicMood
+          musicMood,
+          hasMusicUrl: !!musicUrl
         });
 
         const result = await videoProvider.generate(composition);

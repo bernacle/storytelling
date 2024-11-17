@@ -15,7 +15,6 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
     private readonly tempDir: string,
     private readonly outputDir: string,
   ) {
-    // Check if directories exist
     if (!fs.existsSync(tempDir)) {
       throw new Error(`Temp directory not found: ${tempDir}`);
     }
@@ -23,17 +22,19 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
       throw new Error(`Output directory not found: ${outputDir}`);
     }
 
-    // Check FFmpeg
     try {
-      ffmpeg.getAvailableCodecs((err, _codecs) => {
-        if (err) {
-          throw new Error('FFmpeg not properly configured');
-        }
-      });
+      ffmpeg()
+        .input('test')
+        .outputOptions(['-version'])
+        .on('error', (err) => {
+          throw new Error(`FFmpeg test failed: ${err.message}`);
+        })
+        .on('end', () => {
+          console.log('FFmpeg test successful');
+        });
     } catch (error) {
       console.error('FFmpeg initialization error:', error);
-      console.log('Please ensure FFmpeg is installed. On macOS, run: brew install ffmpeg');
-      throw new Error('FFmpeg not found. Please install FFmpeg before running the application.');
+      throw new Error('FFmpeg not found or not properly configured.');
     }
   }
 
@@ -49,62 +50,87 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
 
   private async createSegmentedVideo(
     imagePaths: string[],
-    duration: number,
-    outputPath: string
+    totalDuration: number,
+    sceneDurations: number[],
+    outputPath: string,
+    format: '1080x1920' | '1920x1080' = '1080x1920'
   ): Promise<void> {
-    const segmentDuration = duration / imagePaths.length;
+    const [width, height] = format.split('x').map(Number);
 
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       let command = ffmpeg();
 
+      // Add all images as inputs
       imagePaths.forEach(imagePath => {
         command = command
           .input(imagePath)
-          .inputOptions(['-loop 1'])
+          .inputOptions(['-loop 1']);
       });
 
+      // Create filter graph
       const filters: string[] = [];
+      let currentTime = 0;
 
+      // Scale and process inputs
       imagePaths.forEach((_, i) => {
-        if (i === 0) {
-          filters.push(`[${i}:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,setpts=PTS-STARTPTS[v${i}]`);
-        } else {
-          const fadeStart = (i * segmentDuration) - 0.5;
-          filters.push(`[${i}:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,setpts=PTS-STARTPTS+${i * segmentDuration}/TB[v${i}]`);
-          filters.push(`[tmp${i - 1}][v${i}]overlay=enable='between(t,${fadeStart},${i * segmentDuration})':shortest=1[tmp${i}]`);
-        }
+        filters.push(`[${i}:v]scale=${width}:${height},setsar=1:1[scaled${i}]`);
       });
+
+      // Chain the videos together with transitions
+      filters.push(`[scaled0]trim=duration=${sceneDurations[0]}[first]`);
+      let lastOutput = 'first';
+
+      for (let i = 1; i < imagePaths.length; i++) {
+        const fadeStart = currentTime + sceneDurations[i - 1] - 0.5;
+        currentTime += sceneDurations[i - 1];
+
+        filters.push(
+          `[${lastOutput}][scaled${i}]xfade=transition=fade:duration=0.5:offset=${fadeStart}[trans${i}]`
+        );
+        lastOutput = `trans${i}`;
+      }
+
+      let completed = false;
 
       command
-        .complexFilter(filters, `[tmp${imagePaths.length - 1}]`)
+        .complexFilter(filters, [lastOutput])
         .outputOptions([
           '-c:v libx264',
           '-preset medium',
           '-crf 23',
           '-movflags +faststart',
           '-pix_fmt yuv420p',
-          `-t ${duration}`
+          `-t ${totalDuration}`,
+          `-s ${format}`
         ])
         .on('start', (commandLine) => {
-          console.log('FFmpeg process started:', commandLine);
-        })
-        .on('progress', (progress) => {
-          console.log('Processing: ', {
-            frames: progress.frames,
-            currentFps: progress.currentFps,
-            currentKbps: progress.currentKbps,
-            targetSize: progress.targetSize,
-            timemark: progress.timemark,
-            percent: progress.percent
+          console.log('FFmpeg process started:', {
+            format,
+            width,
+            height,
+            totalDuration,
+            sceneDurations,
+            command: commandLine
           });
         })
-        .on('end', () => {
-          console.log('FFmpeg process completed');
-          resolve();
+        .on('stderr', (stderrLine) => {
+          console.log('FFmpeg stderr:', stderrLine);
         })
-        .on('error', (err: Error) => {
-          console.error('FFmpeg process error:', err);
-          reject(new Error(`FFmpeg processing failed: ${err.message}`));
+        .on('progress', (progress) => {
+          console.log('Processing: ', progress);
+        })
+        .on('error', (err) => {
+          if (!completed) {
+            completed = true;
+            console.error('FFmpeg process error:', err);
+            reject(new Error(`FFmpeg processing failed: ${err.message}`));
+          }
+        })
+        .on('end', () => {
+          if (!completed) {
+            completed = true;
+            resolve();
+          }
         })
         .save(outputPath);
     });
@@ -124,6 +150,13 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
       const audioDuration = await getAudioDurationInSeconds(narrationPath);
       console.log(`Narration duration: ${audioDuration} seconds`);
 
+      let musicPath: string | undefined;
+      if (composition.music?.url) {
+        console.log('Saving background music...');
+        musicPath = path.join(workDir, 'background_music.mp3');
+        await this.saveBase64File(composition.music.url, musicPath);
+      }
+
       console.log('Saving images...');
       const imagePaths = await Promise.all(
         composition.scenes.map(async (scene, i) => {
@@ -133,65 +166,95 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
         })
       );
 
-      console.log('Creating base video...');
+      // Calculate scene durations
+      const sceneDurations = composition.scenes.map(scene =>
+        scene.duration
+      );
+      const totalDuration = sceneDurations.reduce((sum, duration) => sum + duration, 0);
+
+      console.log('Creating base video...', {
+        sceneDurations,
+        totalDuration,
+        hasMusicTrack: !!musicPath
+      });
+
+      // Create the base video with the images
       const baseVideoPath = path.join(workDir, 'base_video.mp4');
       await this.createSegmentedVideo(
         imagePaths,
-        audioDuration,
-        baseVideoPath
+        totalDuration,
+        sceneDurations,
+        baseVideoPath,
+        '1080x1920'
       );
-
-      // Handle music - check if URL is provided
-      const musicPath = path.join(workDir, 'background_music.mp3');
-      if (composition.music.url) {
-        console.log('Saving background music...');
-        await this.saveBase64File(composition.music.url, musicPath);
-      }
 
       const outputFileName = `story_${sessionId}.mp4`;
       const outputPath = path.join(this.outputDir, outputFileName);
 
+      // Combine video with audio tracks
       console.log('Adding audio tracks...');
-      await new Promise((resolve, reject) => {
+      await new Promise<void>((resolve, reject) => {
         let command = ffmpeg()
-          .input(baseVideoPath)
-          .input(narrationPath);
+          .input(baseVideoPath)  // Video
+          .input(narrationPath); // Narration
 
-        // Only add music input if URL was provided
-        if (composition.music.url) {
-          command = command.input(musicPath);
+        if (musicPath) {
+          command = command.input(musicPath);  // Background music
         }
 
-        // Adjust complex filter based on whether we have music
-        const complexFilter = composition.music.url
-          ? [
-            `[2:a]volume=${composition.music.volume}[music]`,
-            '[1:a][music]amix=inputs=2:duration=first[audio]'
-          ]
-          : [];
+        // Set up audio mixing based on whether we have background music
+        if (musicPath) {
+          console.log('Configuring audio mix with background music...');
+          command
+            .complexFilter([
+              // Apply volume adjustment to background music
+              `[2:a]volume=${composition.music?.volume || 0.4}[music]`,
+              // Mix narration with background music
+              '[1:a][music]amix=inputs=2:duration=first[audio]'
+            ])
+            .outputOptions([
+              '-c:v copy',       // Copy video stream without re-encoding
+              '-map 0:v',        // Include video stream
+              '-map [audio]',    // Use mixed audio
+              '-shortest'        // End when shortest stream ends
+            ]);
+        } else {
+          console.log('Configuring audio with narration only...');
+          command
+            .outputOptions([
+              '-c:v copy',
+              '-map 0:v',
+              '-map 1:a',
+              '-shortest'
+            ]);
+        }
+
+        let completed = false;
 
         command
-          .complexFilter(complexFilter)
-          .outputOptions([
-            '-c:v copy',
-            '-map 0:v',
-            composition.music.url ? '-map [audio]' : '-map 1:a',
-            '-shortest'
-          ])
           .on('start', (commandLine) => {
             console.log('FFmpeg audio mixing started:', commandLine);
           })
           .on('progress', (progress) => {
             console.log('Audio mixing progress:', progress);
           })
-          .save(outputPath)
-          .on('end', resolve)
           .on('error', (err) => {
-            console.error('FFmpeg audio mixing error:', err);
-            reject(new Error(`Audio mixing failed: ${err.message}`));
-          });
+            if (!completed) {
+              completed = true;
+              console.error('FFmpeg audio mixing error:', err);
+              reject(new Error(`Audio mixing failed: ${err.message}`));
+            }
+          })
+          .on('end', () => {
+            if (!completed) {
+              completed = true;
+              resolve();
+            }
+          })
+          .save(outputPath);
       });
 
+      // Cleanup temporary files
       await rm(workDir, { recursive: true, force: true });
 
       return {
@@ -201,7 +264,7 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
       await rm(workDir, { recursive: true, force: true })
         .catch(err => console.error('Cleanup error during error handling:', err));
 
-      throw new Error(`Video generation failed: ${error}`);
+      throw error instanceof Error ? error : new Error(`Video generation failed: ${error}`);
     }
   }
 }

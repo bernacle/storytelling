@@ -178,7 +178,9 @@ export class CreateStoryUseCase {
               .filter((url): url is string => url !== null),
             style,
             musicMood,
-            scenes: analysis.scenes
+            scenes: analysis.scenes,
+            musicUrl: music?.audio_url || undefined,
+            musicVolume: 0.4
           }, {
             attempts: 3,
             backoff: {
