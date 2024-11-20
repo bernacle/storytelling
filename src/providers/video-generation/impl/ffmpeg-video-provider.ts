@@ -1,3 +1,4 @@
+import { generateSrtFile, generateSubtitleFilter } from '@/handlers/subtitles';
 import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
@@ -53,6 +54,7 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
     totalDuration: number,
     sceneDurations: number[],
     outputPath: string,
+    subtitlePath: string,
     format: '1080x1920' | '1920x1080' = '1080x1920'
   ): Promise<void> {
     const [width, height] = format.split('x').map(Number);
@@ -90,10 +92,14 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
         lastOutput = `trans${i}`;
       }
 
+      // Add subtitles last in the filter chain
+      const subtitleFilter = generateSubtitleFilter(subtitlePath, height);
+      filters.push(`[${lastOutput}]${subtitleFilter}[final]`);
+
       let completed = false;
 
       command
-        .complexFilter(filters, [lastOutput])
+        .complexFilter(filters, ['final'])  // Make sure we're outputting the 'final' pad
         .outputOptions([
           '-c:v libx264',
           '-preset medium',
@@ -136,12 +142,19 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
     });
   }
 
+  // Helper function to ensure subtitle filter is properly escaped
+  private escapeFilterPath(path: string): string {
+    return path.replace(/['\[\],]/g, '\\$&');
+  }
+
   async generate(composition: VideoComposition): Promise<VideoGenerationResult> {
     const sessionId = Date.now().toString();
     const workDir = path.join(this.tempDir, sessionId);
 
     try {
       await mkdir(workDir, { recursive: true });
+
+      console.log(composition.music.url)
 
       console.log('Saving narration...');
       const narrationPath = path.join(workDir, 'narration.mp3');
@@ -172,6 +185,10 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
       );
       const totalDuration = sceneDurations.reduce((sum, duration) => sum + duration, 0);
 
+      console.log('Generating subtitles...');
+      const subtitlesPath = path.join(workDir, 'subtitles.srt');
+      await generateSrtFile(composition.scenes, subtitlesPath);
+
       console.log('Creating base video...', {
         sceneDurations,
         totalDuration,
@@ -185,6 +202,7 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
         totalDuration,
         sceneDurations,
         baseVideoPath,
+        subtitlesPath,
         '1080x1920'
       );
 

@@ -41,6 +41,10 @@ export function createStoryWorker(
     async (job: Job<StoryGenerationJob>) => {
       const { storyId, scriptId, voiceUrl, imageUrls, style, musicMood, scenes, musicUrl, musicVolume } = job.data;
 
+      console.log(`[Worker] Processing story generation for job ${job.id}`);
+      console.log('Story generation job data:', job.data);
+
+
       try {
         await storiesRepository.updateStatus(storyId, 'PROCESSING');
         console.log('Starting video generation for story:', storyId);
@@ -58,7 +62,8 @@ export function createStoryWorker(
             image: imageUrls[index],
             duration: calculateSceneDuration(scene.text),
             transition: 'fade' as const,
-            transitionDuration: 0.5
+            transitionDuration: 0.5,
+            text: scene.text
           })),
           style,
           music: {
