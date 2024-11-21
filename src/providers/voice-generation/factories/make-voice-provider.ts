@@ -1,9 +1,9 @@
-import type { VoiceGenerationProvider } from '../voice-generation-provider';
-import { env } from '@/env';
-import { PlayHTProvider } from '../impl/playht/playht-voice-generation-provider';
 import { DeepgramVoiceProvider } from '../impl/deepgram/deepgram-voice-generation-provider';
+import { ElevenLabsProvider } from '../impl/elevenlabs/elevenlabs-voice-generation-provider';
+import { PlayHTProvider } from '../impl/playht/playht-voice-generation-provider';
+import type { VoiceGenerationProvider } from '../voice-generation-provider';
 
-export type VoiceProviderType = 'deepgram' | 'playht'
+export type VoiceProviderType = 'deepgram' | 'playht' | 'elevenlabs'
 
 export type VoiceProviderConfig = {
   provider?: VoiceProviderType;
@@ -23,6 +23,9 @@ export function makeVoiceProvider(config?: VoiceProviderConfig): VoiceGeneration
 
     case 'playht':
       return new PlayHTProvider();
+
+    case 'elevenlabs':
+      return new ElevenLabsProvider();
 
     default:
       throw new VoiceProviderError(`Unsupported provider: ${config?.provider}`);

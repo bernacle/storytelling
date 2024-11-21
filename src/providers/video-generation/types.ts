@@ -4,6 +4,7 @@ export type VideoComposition = {
     type: string;
   };
   scenes: Scene[];
+  content: string
   style: string;
   music: {
     mood: string;

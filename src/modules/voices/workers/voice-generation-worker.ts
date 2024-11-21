@@ -1,9 +1,9 @@
+import type { AnalysisResponse } from '@/providers/text-analysis'
+import type { VoiceGenerationProvider, VoicePreference } from '@/providers/voice-generation'
 import { Job, Worker } from 'bullmq'
 import type * as IORedis from 'ioredis'
-import { VoicesRepository } from '../repositories/voices-repository'
 import { ScriptsRepository } from '../../scripts/repositories/scripts-repository'
-import type { VoiceGenerationProvider, VoicePreference } from '@/providers/voice-generation'
-import type { AnalysisResponse } from '@/providers/text-analysis'
+import { VoicesRepository } from '../repositories/voices-repository'
 import { generateEnhancedContent } from '../utils'
 
 type VoiceGenerationJob = {
@@ -44,8 +44,6 @@ export function createVoiceWorker(
           enhancedContent,
           voiceOptions
         )
-
-        console.log('Voice generation successful:', result)
 
         await voicesRepository.updateStatus(voiceId, 'COMPLETED', {
           audio_url: result.audioUrl

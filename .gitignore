@@ -4,3 +4,5 @@ node_modules
 
 public/stories/*
 .DS_Store
+
+tmp/video-processing/*

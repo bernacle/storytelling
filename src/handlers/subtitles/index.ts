@@ -1,4 +1,3 @@
-import type { Scene } from '@/providers/video-generation/types';
 import fs from 'fs';
 import { promisify } from 'util';
 
@@ -57,32 +56,32 @@ function calculateSpeakingTime(text: string): number {
 }
 
 export async function generateSrtFile(
-  scenes: Scene[],
+  content: string,
   outputPath: string
 ): Promise<void> {
   let currentTime = 0;
   let srtContent = '';
   let subtitleIndex = 1;
 
-  for (const scene of scenes) {
-    const sceneDuration = calculateSpeakingTime(scene.text);
-    const segments = splitIntoPhrasesWithTiming(scene.text, currentTime, sceneDuration);
+  const duration = calculateSpeakingTime(content);
+  const segments = splitIntoPhrasesWithTiming(content, currentTime, duration);
 
-    for (const segment of segments) {
-      // Wrap text if it exceeds maximum line length
-      const wrappedText = wrapText(segment.text, subtitleStyle.fontProperties.maxLineLength);
+  for (const segment of segments) {
+    // Wrap text if it exceeds maximum line length
+    const wrappedText = wrapText(segment.text, subtitleStyle.fontProperties.maxLineLength);
 
-      srtContent += `${subtitleIndex}\n`;
-      srtContent += `${formatSrtTime(segment.startTime)} --> ${formatSrtTime(segment.endTime)}\n`;
-      srtContent += `${wrappedText}\n\n`;
-      subtitleIndex++;
-    }
-
-    currentTime += sceneDuration;
+    srtContent += `${subtitleIndex}\n`;
+    srtContent += `${formatSrtTime(segment.startTime)} --> ${formatSrtTime(segment.endTime)}\n`;
+    srtContent += `${wrappedText}\n\n`;
+    subtitleIndex++;
   }
+
+  currentTime += duration;
+
 
   await writeFile(outputPath, srtContent, 'utf8');
 }
+
 
 // Styles for subtitles
 export const subtitleStyle = {

@@ -13,6 +13,7 @@ type StoryGenerationJob = {
   style: Style;
   musicMood: MusicMood;
   scenes: AnalysisResponse['scenes'];
+  content: string
   musicUrl?: string;
   musicVolume?: number;
 }
@@ -39,11 +40,7 @@ export function createStoryWorker(
   const worker = new Worker<StoryGenerationJob>(
     'generate-story',
     async (job: Job<StoryGenerationJob>) => {
-      const { storyId, scriptId, voiceUrl, imageUrls, style, musicMood, scenes, musicUrl, musicVolume } = job.data;
-
-      console.log(`[Worker] Processing story generation for job ${job.id}`);
-      console.log('Story generation job data:', job.data);
-
+      const { storyId, scriptId, voiceUrl, imageUrls, style, musicMood, scenes, musicUrl, musicVolume, content } = job.data;
 
       try {
         await storiesRepository.updateStatus(storyId, 'PROCESSING');
@@ -58,6 +55,7 @@ export function createStoryWorker(
             url: voiceUrl,
             type: 'narration' as const
           },
+          content,
           scenes: scenes.map((scene, index) => ({
             image: imageUrls[index],
             duration: calculateSceneDuration(scene.text),

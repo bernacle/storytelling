@@ -17,6 +17,7 @@ const envSchema = z.object({
   HUGGINGFACE_API_URL: z.string(),
   DEEPGRAM_API_KEY: z.string(),
   DEEPGRAM_URL: z.string(),
+  ELEVENLABS_API_KEY: z.string().default("fake-key"),
 })
 
 const _env = envSchema.safeParse(process.env)

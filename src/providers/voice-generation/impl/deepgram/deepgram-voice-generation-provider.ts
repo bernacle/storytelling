@@ -1,7 +1,6 @@
 import { env } from "@/env";
-import type { VoiceGenerationProvider } from '../../voice-generation-provider';
 import type { VoiceGenerationOptions } from '../../types';
-import { accentVoiceMapping } from "./accent-voice-mapper";
+import type { VoiceGenerationProvider } from '../../voice-generation-provider';
 
 export class DeepgramVoiceProvider implements VoiceGenerationProvider {
   constructor() {
@@ -12,9 +11,11 @@ export class DeepgramVoiceProvider implements VoiceGenerationProvider {
 
   private getVoiceId(accent?: string, gender?: string): string {
     const mappedAccent = accent || 'en-US';
-    const mappedGender = gender || 'male';
+    const mappedGender = gender || 'female';
 
-    return accentVoiceMapping[mappedAccent]?.[mappedGender] || 'aura-orion-en';
+    // return accentVoiceMapping[mappedAccent]?.[mappedGender] || 'aura-orion-en';
+
+    return 'aura-athena-en';
   }
 
   async generate(text: string, voiceOptions: VoiceGenerationOptions) {
@@ -23,6 +24,7 @@ export class DeepgramVoiceProvider implements VoiceGenerationProvider {
 
     const endpoint = new URL(env.DEEPGRAM_URL);
     endpoint.searchParams.append("model", voiceId);
+    endpoint.searchParams.append("encoding", "mp3");
 
 
     try {
@@ -54,7 +56,7 @@ export class DeepgramVoiceProvider implements VoiceGenerationProvider {
 
       console.log('Deepgram TTS generation successful');
       return {
-        audioUrl: `data:audio/wav;base64,${base64Audio}`
+        audioUrl: `data:audio/mp3;base64,${base64Audio}`
       };
     } catch (error) {
       console.error('Deepgram TTS generation error:', error);

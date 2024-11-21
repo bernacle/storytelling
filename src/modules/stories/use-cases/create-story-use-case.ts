@@ -179,6 +179,7 @@ export class CreateStoryUseCase {
             style,
             musicMood,
             scenes: analysis.scenes,
+            content: script.content,
             musicUrl: music?.audio_url || undefined,
             musicVolume: 0.4
           }, {

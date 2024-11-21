@@ -53,24 +53,45 @@ function addEmotionalCues(text: string, emotion: string): string {
 
 export function generateEnhancedContent(content: string, analysis: AnalysisResponse): string {
   if (!analysis?.scenes) {
-    return addNaturalPauses(content)
+    return addNaturalPauses(content);
   }
 
-  return analysis.scenes.reduce((enhancedContent, scene, index) => {
-    let modifiedText = scene.text
+  // Create a map of scene texts to their emotions
+  const sceneEmotions = new Map(
+    analysis.scenes.map(scene => [scene.text, scene.emotion])
+  );
 
-    // Add emotion-specific enhancements
-    if (scene.emotion) {
-      modifiedText = addEmotionalCues(modifiedText, scene.emotion)
-      modifiedText = addFillerWords(modifiedText, scene.emotion)
+  // Split the content into parts and enhance each part based on whether it's a scene
+  let currentPosition = 0;
+  let enhancedContent = '';
+
+  for (const scene of analysis.scenes) {
+    // Find the scene's position in the original content
+    const sceneIndex = content.indexOf(scene.text, currentPosition);
+
+    if (sceneIndex > currentPosition) {
+      // Add any content before the scene with natural pauses
+      const beforeScene = content.slice(currentPosition, sceneIndex);
+      enhancedContent += addNaturalPauses(beforeScene);
     }
 
-    // Add natural pauses
-    modifiedText = addNaturalPauses(modifiedText)
+    // Enhance the scene text with emotional cues
+    let modifiedText = scene.text;
+    if (scene.emotion) {
+      modifiedText = addEmotionalCues(modifiedText, scene.emotion);
+      modifiedText = addFillerWords(modifiedText, scene.emotion);
+    }
+    modifiedText = addNaturalPauses(modifiedText);
 
-    // Add scene transitions
-    const transition = index > 0 ? '... ' : ''
+    enhancedContent += modifiedText;
+    currentPosition = sceneIndex + scene.text.length;
+  }
 
-    return enhancedContent + transition + modifiedText
-  }, '')
+  // Add any remaining content after the last scene
+  if (currentPosition < content.length) {
+    const afterScenes = content.slice(currentPosition);
+    enhancedContent += addNaturalPauses(afterScenes);
+  }
+
+  return enhancedContent;
 }
