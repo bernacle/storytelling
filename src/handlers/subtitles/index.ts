@@ -57,13 +57,15 @@ function calculateSpeakingTime(text: string): number {
 
 export async function generateSrtFile(
   content: string,
+  audioDuration: number | string,
   outputPath: string
 ): Promise<void> {
   let currentTime = 0;
   let srtContent = '';
   let subtitleIndex = 1;
 
-  const duration = calculateSpeakingTime(content);
+
+  const duration = (typeof audioDuration === 'string') ? calculateSpeakingTime(content) : audioDuration
   const segments = splitIntoPhrasesWithTiming(content, currentTime, duration);
 
   for (const segment of segments) {

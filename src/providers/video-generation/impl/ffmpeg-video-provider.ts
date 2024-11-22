@@ -30,6 +30,7 @@ async function probeFile(filePath: string): Promise<any> {
   });
 }
 
+
 export class FFmpegVideoProvider implements VideoGenerationProvider {
   constructor(
     private readonly tempDir: string,
@@ -242,20 +243,26 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
       const sceneDurations = composition.scenes.map(scene => scene.duration);
       const totalDuration = sceneDurations.reduce((sum, duration) => sum + duration, 0);
 
+
+
+      const probeData = await probeFile(narrationPath);
+      const duration = probeData.format.duration;
+      console.log('Audio duration:', duration);
+
       console.log('Generating subtitles...');
       const subtitlesPath = path.join(workDir, 'subtitles.srt');
-      await generateSrtFile(composition.content, subtitlesPath);
+      await generateSrtFile(composition.content, duration, subtitlesPath);
 
       console.log('Creating base video...', {
         sceneDurations,
-        totalDuration,
+        duration,
         hasMusicTrack: !!musicPath
       });
 
       const baseVideoPath = path.join(workDir, 'base_video.mp4');
       await this.createSegmentedVideo(
         imagePaths,
-        totalDuration,
+        duration,
         sceneDurations,
         baseVideoPath,
         subtitlesPath,
@@ -302,6 +309,9 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
         if (musicPath) {
           console.log('Configuring audio mix with background music...');
           command
+            .inputOptions([
+              '-stream_loop -1'
+            ])
             .complexFilter([
               `[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=1[narration]`,
               `[2:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=${composition.music?.volume || 0.4}[music]`,
@@ -362,4 +372,6 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
       throw error instanceof Error ? error : new Error(`Video generation failed: ${error}`);
     }
   }
+
+
 }

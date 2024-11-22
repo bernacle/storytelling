@@ -23,6 +23,7 @@
     "get-audio-duration": "^4.0.1",
     "groq-sdk": "^0.7.0",
     "ioredis": "^5.4.1",
+    "music-metadata": "^10.6.0",
     "openai": "^4.71.1",
     "playht": "^0.13.0",
     "zod": "^3.23.8"
