@@ -1,9 +1,8 @@
-import type { ImageGenerationProvider } from '../image-generation-provider';
+import { env } from '@/env';
 import OpenAI from 'openai';
+import type { ImageGenerationProvider } from '../image-generation-provider';
 import { DallEProvider } from '../impl/dall-e/dall-e-image-generation-provider';
 import { HuggingFaceProvider } from '../impl/hugging-face/hugging-face-image-generation-provider';
-import { HUGGINGFACE_MODELS } from '../impl/hugging-face/constants';
-import { env } from '@/env';
 
 export type ImageProviderType = 'replicate' | 'dalle' | 'huggingface';
 

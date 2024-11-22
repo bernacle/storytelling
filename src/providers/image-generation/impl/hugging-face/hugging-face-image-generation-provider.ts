@@ -9,6 +9,9 @@ type HuggingFaceConfig = {
   numInferenceSteps?: number;
   guidanceScale?: number;
   negativePrompt?: string;
+  samplingMethod?: string;
+  modelRevision?: string;
+  safetyChecker?: boolean;
 }
 
 export class HuggingFaceProvider implements ImageGenerationProvider {
@@ -24,15 +27,65 @@ export class HuggingFaceProvider implements ImageGenerationProvider {
     this.config = {
       numInferenceSteps: config.numInferenceSteps ?? 30,
       guidanceScale: config.guidanceScale ?? 7.5,
-      negativePrompt: config.negativePrompt ?? 'ugly, blurry, poor quality, duplicate, mutated, deformed'
+      negativePrompt: config.negativePrompt ?? [
+        "ugly", "blurry", "poor quality", "duplicate", "mutated", "deformed",
+        "bad anatomy", "extra limbs", "poorly drawn face", "mutation", "malformed",
+        "out of frame", "extra fingers", "mutated hands", "poorly drawn hands",
+        "fused fingers", "too many fingers", "multiple heads", "extra arms",
+        "extra legs", "distorted", "disfigured", "gross proportions",
+        "missing arms", "missing legs", "double heads", "multiple faces",
+        "amateur drawing", "bad proportions", "floating limbs", "disconnected limbs",
+        "asymmetric eyes", "misaligned eyes", "crossed eyes", "watermark",
+        "signature", "text", "logo", "low quality", "pixelated"
+      ].join(", "),
+      samplingMethod: config.samplingMethod ?? "DPM++ 2M Karras",
+      safetyChecker: config.safetyChecker ?? true
     };
   }
+
+  private enhancePrompt(prompt: string, orientation: 'vertical' | 'horizontal'): string {
+    const qualityModifiers = [
+      "masterpiece",
+      "high quality",
+      "detailed",
+      "professional",
+      "sharp focus",
+      "high resolution",
+      "well-composed",
+      "professionally photographed"
+    ];
+
+    const compositionModifiers = orientation === 'vertical' ? [
+      "portrait composition",
+      "vertical framing",
+      "centered composition"
+    ] : [
+      "landscape composition",
+      "horizontal framing",
+      "rule of thirds"
+    ];
+
+    const technicalModifiers = [
+      "8k resolution",
+      "detailed lighting",
+      "professional lighting",
+      "high detail"
+    ];
+
+    return [
+      prompt,
+      "(",
+      [...qualityModifiers, ...compositionModifiers, ...technicalModifiers].join(", "),
+      ")"
+    ].join(" ");
+  }
+
 
   async generate({ prompt, orientation = 'vertical' }: ImageGenerationOptions): Promise<ImageGenerationResult> {
     try {
       const [width, height] = VIDEO_FORMATS[orientation].split('x').map(Number);
 
-
+      const enhancedPrompt = this.enhancePrompt(prompt, orientation);
 
       const response = await fetch(`${this.baseUrl}/${this.modelId}`, {
         method: 'POST',
@@ -42,13 +95,19 @@ export class HuggingFaceProvider implements ImageGenerationProvider {
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          inputs: prompt,
+          inputs: enhancedPrompt,
           parameters: {
             negative_prompt: this.config.negativePrompt,
             num_inference_steps: this.config.numInferenceSteps,
             guidance_scale: this.config.guidanceScale,
             width,
             height,
+            sampler: this.config.samplingMethod,
+            safety_checker: this.config.safetyChecker,
+            clip_skip: 2, // Skip CLIP text encoding layers for better results
+            seed: Math.floor(Math.random() * 2147483647), // Random seed for variety
+            tiling: false, // Prevent tiling artifacts
+            restore_faces: true, // Improve face generation
           }
         }),
       });
