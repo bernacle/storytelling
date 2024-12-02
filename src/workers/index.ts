@@ -1,4 +1,4 @@
-import { voiceWorker, imageWorker, storyWorker, musicWorker } from "./initialize-workers"
+import { cardWorker, imageWorker, musicWorker, storyWorker, voiceWorker } from "./initialize-workers"
 
 async function startWorkers() {
   voiceWorker.on('completed', (job) => {
@@ -7,6 +7,9 @@ async function startWorkers() {
 
   imageWorker.on('completed', (job) => {
     console.log(`Image generation completed for job ${job.id}`)
+  })
+  cardWorker.on('completed', (job) => {
+    console.log(`Card generation completed for job ${job.id}`)
   })
 
   storyWorker.on('completed', (job) => {
@@ -18,7 +21,7 @@ async function startWorkers() {
   })
 
   // Error handlers
-  const workers = [voiceWorker, imageWorker, storyWorker, musicWorker]
+  const workers = [voiceWorker, imageWorker, storyWorker, musicWorker, cardWorker]
   workers.forEach(worker => {
     worker.on('failed', (job, error) => {
       console.error(

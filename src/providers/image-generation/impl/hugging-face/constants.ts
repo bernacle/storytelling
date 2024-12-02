@@ -11,8 +11,8 @@ export const HUGGINGFACE_MODELS = {
     MODEL_ID: "playgroundai/playground-v2-1024px-aesthetic",
     DESCRIPTION: "Playground v2 - Aesthetic focused model"
   },
-  ANYTHING_V5: {
-    MODEL_ID: "stablediffusionapi/anything-v5",
+  V1_5: {
+    MODEL_ID: "stable-diffusion-v1-5/stable-diffusion-v1-5",
     DESCRIPTION: "Anything V5 - Versatile model good for anime and illustrations"
   }
 } as const;

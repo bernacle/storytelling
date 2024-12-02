@@ -19,6 +19,7 @@ model User {
   stories Story[]
   images  Image[]
   musics  Music[]
+  cards   Card[]
 
   @@map("users")
 }
@@ -39,11 +40,12 @@ model ApiKey {
 }
 
 model Script {
-  id         String   @id @default(uuid())
+  id         String     @id @default(uuid())
   content    String
+  type       ScriptType @default(STORY)
   analysis   Json
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
 
   user    User   @relation(fields: [user_id], references: [id])
   user_id String
@@ -52,6 +54,7 @@ model Script {
   stories Story[]
   images  Image[]
   musics  Music[]
+  cards   Card[]
 
   @@map("scripts")
 }
@@ -129,6 +132,25 @@ model Story {
   @@map("stories")
 }
 
+model Card {
+  id            String        @id @default(uuid())
+  script_id     String
+  script        Script        @relation(fields: [script_id], references: [id])
+  color_palette Json
+  font_style    String
+  layout        String
+  card_url      String?
+  error         String?
+  status        RequestStatus @default(PENDING)
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id])
+
+  @@map("cards")
+}
+
 enum ApiKeyStatus {
   ACTIVE
   REVOKED
@@ -158,4 +180,9 @@ enum MusicMood {
   UPBEAT
   DRAMATIC
   CALM
+}
+
+enum ScriptType {
+  STORY
+  CARD
 }

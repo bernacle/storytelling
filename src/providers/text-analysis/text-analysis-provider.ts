@@ -1,5 +1,6 @@
-import type { AnalysisRequest, AnalysisResponse } from "./types";
+import type { AnalysisRequest, AnalysisResponse, CardAnalysisResponse } from "./types";
 
 export interface TextAnalysisProvider {
-  analyze(request: AnalysisRequest): Promise<AnalysisResponse>
+  analyzeStory(request: AnalysisRequest): Promise<AnalysisResponse>
+  analyzeCard(request: AnalysisRequest): Promise<CardAnalysisResponse>
 }

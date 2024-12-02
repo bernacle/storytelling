@@ -17,6 +17,8 @@ export const imageQueue = new Queue('generate-image', {
   }
 });
 
+export const cardQueue = new Queue("generate-card", { connection: redis });
+
 export const voiceQueue = new Queue('voice-generation', {
   connection: redis,
   defaultJobOptions: {

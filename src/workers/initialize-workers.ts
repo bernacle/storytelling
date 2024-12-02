@@ -1,5 +1,7 @@
 import { redis } from "@/lib/redis"
+import { PrismaCardsRepository } from "@/modules/images/repositories/prisma/prisma-cards-repository"
 import { PrismaImagesRepository } from "@/modules/images/repositories/prisma/prisma-images-repository"
+import { createCardWorker } from "@/modules/images/workers/card-generation-worker"
 import { createImageWorker } from "@/modules/images/workers/image-generation-worker"
 import { PrismaMusicsRepository } from "@/modules/musics/repositories/prisma/prisma-musics-repository"
 import { createMusicWorker } from "@/modules/musics/workers/music-generation-worker"
@@ -15,5 +17,6 @@ import { makeVoiceProvider } from "@/providers/voice-generation/factories/make-v
 
 export const voiceWorker = createVoiceWorker(redis, new PrismaVoicesRepository(), new PrismaScriptsRepository(), makeVoiceProvider({ provider: 'deepgram' }))
 export const imageWorker = createImageWorker(redis, new PrismaImagesRepository(), makeImageProvider({ provider: 'huggingface' }))
+export const cardWorker = createCardWorker(redis, new PrismaCardsRepository(), makeImageProvider({ provider: 'huggingface' }))
 export const storyWorker = createStoryWorker(redis, new PrismaStoriesRepository(), makeVideoProvider())
 export const musicWorker = createMusicWorker(redis, new PrismaMusicsRepository(), makeMusicProvider())

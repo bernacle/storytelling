@@ -1,13 +1,24 @@
 
-export type AnalysisResponse = {
-  emotions: Array<{ name: string; intensity: number }>
-  themes: string[]
-  tone: string
-  mood: string
-  suggestedMusic: string
-  scenes: Array<{ text: string; emotion: string }>
-  modifiedScript?: string
-}
+
+export type BaseAnalysisResponse = {
+  emotions: Array<{ name: string; intensity: number }>;
+  themes: string[];
+  tone: string;
+  mood: string;
+  suggestedMusic: string;
+};
+
+export type AnalysisResponse = BaseAnalysisResponse & {
+  scenes: Array<{ text: string; emotion: string }>;
+};
+
+export type CardAnalysisResponse = BaseAnalysisResponse & {
+  designSuggestions: {
+    colorPalette: string[];
+    fontStyle: string;
+    layout: string;
+  };
+};
 
 export type AnalysisRequest = {
   content: string
