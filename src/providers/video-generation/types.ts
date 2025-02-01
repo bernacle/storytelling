@@ -4,14 +4,9 @@ export type VideoComposition = {
     type: string;
   };
   scenes: Scene[];
-  content: string
+  content: string;
   style: string;
-  music: {
-    mood: string;
-    volume: number;
-    url?: string; // Optional for backward compatibility
-  };
-}
+};
 
 export type Scene = {
   image: string; // base64 string
@@ -19,8 +14,8 @@ export type Scene = {
   transition: string;
   transitionDuration: number;
   text: string;
-}
+};
 
 export type VideoGenerationResult = {
   videoUrl: string;
-}
+};

@@ -18,7 +18,6 @@ model User {
   voices  Voice[]
   stories Story[]
   images  Image[]
-  musics  Music[]
   cards   Card[]
 
   @@map("users")
@@ -53,7 +52,6 @@ model Script {
   voices  Voice[]
   stories Story[]
   images  Image[]
-  musics  Music[]
   cards   Card[]
 
   @@map("scripts")
@@ -95,28 +93,9 @@ model Image {
   @@map("images")
 }
 
-model Music {
-  id         String        @id @default(uuid())
-  mood       MusicMood
-  audio_url  String?
-  status     RequestStatus @default(PENDING)
-  error      String?
-  duration   Int?
-  created_at DateTime      @default(now())
-  updated_at DateTime      @updatedAt
-
-  user      User   @relation(fields: [user_id], references: [id])
-  user_id   String
-  script    Script @relation(fields: [script_id], references: [id])
-  script_id String
-
-  @@map("musics")
-}
-
 model Story {
   id         String        @id @default(uuid())
   style      Style
-  music_mood MusicMood
   video_url  String?
   image_urls Json
   status     RequestStatus @default(PENDING)
@@ -174,12 +153,6 @@ enum Style {
   REALISTIC
   CARTOON
   MINIMALISTIC
-}
-
-enum MusicMood {
-  UPBEAT
-  DRAMATIC
-  CALM
 }
 
 enum ScriptType {

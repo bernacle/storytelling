@@ -1,11 +1,11 @@
 # Storytelling API
 
 ## Overview
-The Storytelling API allows users to submit scripts and analyze their content to extract moods, themes, emotions, and more. It also provides the capability to generate media such as images, voices, music, and videos based on the analyzed script.
+The Storytelling API allows users to submit scripts and analyze their content to extract moods, themes, emotions, and more. It also provides the capability to generate media such as images, voices, and videos based on the analyzed script.
 
 ## Features
 - **Script Analysis**: Submit a story and receive detailed analysis, including mood, tone, and themes.
-- **Media Generation**: Generate images, voices, music, and videos based on analyzed scripts.
+- **Media Generation**: Generate images, voices, and videos based on analyzed scripts.
 - **API Key Authentication**: Secure your API usage with an API key.
 - **Worker Coordination**: The worker manages media generation and video bundling using FFmpeg.
 
@@ -78,8 +78,7 @@ Send a `POST` request to `/scripts/analyze` with your story:
         { "text": "defying gravity...", "emotion": "excitement" },
         { "text": "her laptop glowing...", "emotion": "pride" }
       ],
-      "themes": ["space exploration", "engineering", "persistence"],
-      "suggestedMusic": "instrumental electronic"
+      "themes": ["space exploration", "engineering", "persistence"]
     }
   }
 }
@@ -89,8 +88,7 @@ Send a `POST` request to `/scripts/analyze` with your story:
 Based on the script analysis, you can make additional requests:
 - **Generate Images:** `POST /images`
 - **Generate Voices:** `POST /voices`
-- **Generate Music:** `POST /musics`
-- **Create a Video:** Bundles all media using FFmpeg
+- **Create a Video:** `POST/stories`
 
 ## Development
 ### Scripts

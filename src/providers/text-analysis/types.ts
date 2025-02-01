@@ -1,11 +1,8 @@
-
-
 export type BaseAnalysisResponse = {
   emotions: Array<{ name: string; intensity: number }>;
   themes: string[];
   tone: string;
   mood: string;
-  suggestedMusic: string;
 };
 
 export type AnalysisResponse = BaseAnalysisResponse & {
@@ -21,5 +18,5 @@ export type CardAnalysisResponse = BaseAnalysisResponse & {
 };
 
 export type AnalysisRequest = {
-  content: string
-}
+  content: string;
+};

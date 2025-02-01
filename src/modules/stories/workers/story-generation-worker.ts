@@ -1,9 +1,9 @@
-import type { AnalysisResponse } from '@/providers/text-analysis';
-import type { VideoGenerationProvider } from '@/providers/video-generation/video-generation-provider';
-import type { MusicMood, Style } from '@prisma/client';
-import { Job, Worker } from 'bullmq';
-import type * as IORedis from 'ioredis';
-import type { StoriesRepository } from '../repositories/stories-repository';
+import type { AnalysisResponse } from "@/providers/text-analysis";
+import type { VideoGenerationProvider } from "@/providers/video-generation/video-generation-provider";
+import type { Style } from "@prisma/client";
+import { Job, Worker } from "bullmq";
+import type * as IORedis from "ioredis";
+import type { StoriesRepository } from "../repositories/stories-repository";
 
 type StoryGenerationJob = {
   storyId: string;
@@ -11,12 +11,9 @@ type StoryGenerationJob = {
   voiceUrl: string;
   imageUrls: string[];
   style: Style;
-  musicMood: MusicMood;
-  scenes: AnalysisResponse['scenes'];
-  content: string
-  musicUrl?: string;
-  musicVolume?: number;
-}
+  scenes: AnalysisResponse["scenes"];
+  content: string;
+};
 // Helper function to calculate scene duration based on text length
 function calculateSceneDuration(text: string): number {
   // Average reading speed is about 150-160 words per minute
@@ -35,76 +32,70 @@ function calculateSceneDuration(text: string): number {
 export function createStoryWorker(
   connection: IORedis.Redis,
   storiesRepository: StoriesRepository,
-  videoProvider: VideoGenerationProvider,
+  videoProvider: VideoGenerationProvider
 ) {
   const worker = new Worker<StoryGenerationJob>(
-    'generate-story',
+    "generate-story",
     async (job: Job<StoryGenerationJob>) => {
-      const { storyId, scriptId, voiceUrl, imageUrls, style, musicMood, scenes, musicUrl, musicVolume, content } = job.data;
+      const { storyId, scriptId, voiceUrl, imageUrls, style, scenes, content } =
+        job.data;
 
       try {
-        await storiesRepository.updateStatus(storyId, 'PROCESSING');
-        console.log('Starting video generation for story:', storyId);
+        await storiesRepository.updateStatus(storyId, "PROCESSING");
+        console.log("Starting video generation for story:", storyId);
 
         if (!scenes.length || !imageUrls.length || !voiceUrl) {
-          throw new Error('Missing required assets for video generation');
+          throw new Error("Missing required assets for video generation");
         }
 
         const composition = {
           audio: {
             url: voiceUrl,
-            type: 'narration' as const
+            type: "narration" as const,
           },
           content,
           scenes: scenes.map((scene, index) => ({
             image: imageUrls[index],
             duration: calculateSceneDuration(scene.text),
-            transition: 'fade' as const,
+            transition: "fade" as const,
             transitionDuration: 0.5,
-            text: scene.text
+            text: scene.text,
           })),
           style,
-          music: {
-            url: musicUrl,
-            mood: musicMood,
-            volume: musicVolume || 0.4
-          }
         };
 
         job.updateProgress(25);
 
-        console.log('Generating video with composition:', {
+        console.log("Generating video with composition:", {
           storyId,
           numberOfScenes: scenes.length,
           style,
-          musicMood,
-          hasMusicUrl: !!musicUrl
         });
 
         const result = await videoProvider.generate(composition);
 
         job.updateProgress(90);
 
-        console.log('Video generation successful:', {
+        console.log("Video generation successful:", {
           storyId,
-          videoUrl: result.videoUrl
+          videoUrl: result.videoUrl,
         });
 
-        await storiesRepository.updateStatus(storyId, 'COMPLETED', {
-          video_url: result.videoUrl
+        await storiesRepository.updateStatus(storyId, "COMPLETED", {
+          video_url: result.videoUrl,
         });
 
         job.updateProgress(100);
         return { success: true, videoUrl: result.videoUrl };
       } catch (error) {
-        console.error('Video generation error:', {
+        console.error("Video generation error:", {
           error: error instanceof Error ? error.stack : error,
           storyId,
-          scriptId
+          scriptId,
         });
 
-        await storiesRepository.updateStatus(storyId, 'FAILED', {
-          error: error instanceof Error ? error.message : 'Unknown error'
+        await storiesRepository.updateStatus(storyId, "FAILED", {
+          error: error instanceof Error ? error.message : "Unknown error",
         });
 
         throw error;
@@ -115,24 +106,24 @@ export function createStoryWorker(
       concurrency: 1,
       removeOnComplete: { count: 100 },
       removeOnFail: { count: 100 },
-      prefix: 'storytelling',
+      prefix: "storytelling",
       limiter: {
         max: 1,
-        duration: 1000 * 60 * 5
-      }
+        duration: 1000 * 60 * 5,
+      },
     }
   );
 
-  worker.on('completed', (job) => {
+  worker.on("completed", (job) => {
     console.log(`[Worker] Completed story generation for job ${job.id}`);
   });
 
-  worker.on('failed', (job, error) => {
+  worker.on("failed", (job, error) => {
     console.error(`[Worker] Failed job ${job?.id}:`, error);
   });
 
-  worker.on('error', (error) => {
-    console.error('[Worker] Story worker error:', error);
+  worker.on("error", (error) => {
+    console.error("[Worker] Story worker error:", error);
   });
 
   return worker;

@@ -1,17 +1,19 @@
-import { generateSrtFile, generateSubtitleFilter } from '@/handlers/subtitles';
-import ffmpeg from 'fluent-ffmpeg';
-import fs from 'fs';
-import path from 'path';
-import { promisify } from 'util';
-import type { VideoComposition, VideoGenerationResult } from '../types';
-import type { VideoGenerationProvider } from '../video-generation-provider';
+import { generateSrtFile, generateSubtitleFilter } from "@/handlers/subtitles";
+import ffmpeg from "fluent-ffmpeg";
+import fs from "fs";
+import path from "path";
+import { promisify } from "util";
+import type { VideoComposition, VideoGenerationResult } from "../types";
+import type { VideoGenerationProvider } from "../video-generation-provider";
 
 const writeFile = promisify(fs.writeFile);
 const mkdir = promisify(fs.mkdir);
 const rm = promisify(fs.rm);
 
 // Helper function to check if a file exists and get its size
-async function checkFile(filePath: string): Promise<{ exists: boolean; size?: number }> {
+async function checkFile(
+  filePath: string
+): Promise<{ exists: boolean; size?: number }> {
   try {
     const stats = await fs.promises.stat(filePath);
     return { exists: true, size: stats.size };
@@ -30,11 +32,10 @@ async function probeFile(filePath: string): Promise<any> {
   });
 }
 
-
 export class FFmpegVideoProvider implements VideoGenerationProvider {
   constructor(
     private readonly tempDir: string,
-    private readonly outputDir: string,
+    private readonly outputDir: string
   ) {
     if (!fs.existsSync(tempDir)) {
       throw new Error(`Temp directory not found: ${tempDir}`);
@@ -45,45 +46,49 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
 
     try {
       ffmpeg()
-        .input('test')
-        .outputOptions(['-version'])
-        .on('error', (err) => {
+        .input("test")
+        .outputOptions(["-version"])
+        .on("error", (err) => {
           throw new Error(`FFmpeg test failed: ${err.message}`);
         })
-        .on('end', () => {
-          console.log('FFmpeg test successful');
+        .on("end", () => {
+          console.log("FFmpeg test successful");
         });
     } catch (error) {
-      console.error('FFmpeg initialization error:', error);
-      throw new Error('FFmpeg not found or not properly configured.');
+      console.error("FFmpeg initialization error:", error);
+      throw new Error("FFmpeg not found or not properly configured.");
     }
   }
 
-  private async saveBase64File(base64Data: string, outputPath: string, expectedType: 'audio' | 'image'): Promise<void> {
+  private async saveBase64File(
+    base64Data: string,
+    outputPath: string,
+    expectedType: "audio" | "image"
+  ): Promise<void> {
     try {
       // Allow for base64 data with or without mime type prefix
       let fileBuffer: Buffer;
-      if (base64Data.includes('base64,')) {
-        const base64Content = base64Data.split('base64,')[1];
-        fileBuffer = Buffer.from(base64Content, 'base64');
+      if (base64Data.includes("base64,")) {
+        const base64Content = base64Data.split("base64,")[1];
+        fileBuffer = Buffer.from(base64Content, "base64");
       } else {
-        fileBuffer = Buffer.from(base64Data, 'base64');
+        fileBuffer = Buffer.from(base64Data, "base64");
       }
 
       await writeFile(outputPath, fileBuffer);
 
       const fileInfo = await checkFile(outputPath);
-      console.log('File saved:', {
+      console.log("File saved:", {
         type: expectedType,
         path: path.basename(outputPath),
         size: fileInfo.size,
-        exists: fileInfo.exists
+        exists: fileInfo.exists,
       });
 
-      if (expectedType === 'audio' && fileInfo.exists) {
+      if (expectedType === "audio" && fileInfo.exists) {
         try {
           const probeData = await probeFile(outputPath);
-          console.log('Audio file probe:', {
+          console.log("Audio file probe:", {
             path: path.basename(outputPath),
             format: probeData.format?.format_name,
             duration: probeData.format?.duration,
@@ -92,27 +97,29 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
               codec_type: s.codec_type,
               codec_name: s.codec_name,
               sample_rate: s.sample_rate,
-              channels: s.channels
-            }))
+              channels: s.channels,
+            })),
           });
         } catch (probeError) {
-          console.error('Failed to probe audio file:', {
+          console.error("Failed to probe audio file:", {
             path: path.basename(outputPath),
-            error: probeError
+            error: probeError,
           });
         }
       }
 
       if (!fileInfo.exists || fileInfo.size === 0) {
-        throw new Error('Generated file is empty or does not exist');
+        throw new Error("Generated file is empty or does not exist");
       }
     } catch (error) {
-      console.error('File save error:', {
+      console.error("File save error:", {
         type: expectedType,
         path: path.basename(outputPath),
-        error
+        error,
       });
-      throw new Error(`Failed to save ${expectedType} file to ${path.basename(outputPath)}: ${error}`);
+      throw new Error(
+        `Failed to save ${expectedType} file to ${path.basename(outputPath)}: ${error}`
+      );
     }
   }
 
@@ -122,18 +129,16 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
     sceneDurations: number[],
     outputPath: string,
     subtitlePath: string,
-    format: '1080x1920' | '1920x1080' = '1080x1920'
+    format: "1080x1920" | "1920x1080" = "1080x1920"
   ): Promise<void> {
-    const [width, height] = format.split('x').map(Number);
+    const [width, height] = format.split("x").map(Number);
 
     return new Promise<void>((resolve, reject) => {
       let command = ffmpeg();
 
       // Add all images as inputs
-      imagePaths.forEach(imagePath => {
-        command = command
-          .input(imagePath)
-          .inputOptions(['-loop 1']);
+      imagePaths.forEach((imagePath) => {
+        command = command.input(imagePath).inputOptions(["-loop 1"]);
       });
 
       // Create filter graph
@@ -147,7 +152,7 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
 
       // Chain the videos together with transitions
       filters.push(`[scaled0]trim=duration=${sceneDurations[0]}[first]`);
-      let lastOutput = 'first';
+      let lastOutput = "first";
 
       for (let i = 1; i < imagePaths.length; i++) {
         const fadeStart = currentTime + sceneDurations[i - 1] - 0.5;
@@ -164,214 +169,179 @@ export class FFmpegVideoProvider implements VideoGenerationProvider {
       filters.push(`[${lastOutput}]${subtitleFilter}[final]`);
 
       command
-        .complexFilter(filters, ['final'])
+        .complexFilter(filters, ["final"])
         .outputOptions([
-          '-c:v libx264',
-          '-preset medium',
-          '-crf 23',
-          '-movflags +faststart',
-          '-pix_fmt yuv420p',
+          "-c:v libx264",
+          "-preset medium",
+          "-crf 23",
+          "-movflags +faststart",
+          "-pix_fmt yuv420p",
           `-t ${totalDuration}`,
-          `-s ${format}`
+          `-s ${format}`,
         ])
-        .on('start', (commandLine) => {
-          console.log('FFmpeg process started:', {
+        .on("start", (commandLine) => {
+          console.log("FFmpeg process started:", {
             format,
             width,
             height,
             totalDuration,
             sceneDurations,
-            command: commandLine
+            command: commandLine,
           });
         })
-        .on('stderr', (stderrLine) => {
-          console.log('FFmpeg stderr:', stderrLine);
+        .on("stderr", (stderrLine) => {
+          console.log("FFmpeg stderr:", stderrLine);
         })
-        .on('progress', (progress) => {
-          console.log('Processing: ', progress);
+        .on("progress", (progress) => {
+          console.log("Processing: ", progress);
         })
-        .on('error', (err) => {
-          console.error('FFmpeg process error:', err);
+        .on("error", (err) => {
+          console.error("FFmpeg process error:", err);
           reject(new Error(`FFmpeg processing failed: ${err.message}`));
         })
-        .on('end', () => {
+        .on("end", () => {
           resolve();
         })
         .save(outputPath);
     });
   }
 
-  async generate(composition: VideoComposition): Promise<VideoGenerationResult> {
+  async generate(
+    composition: VideoComposition
+  ): Promise<VideoGenerationResult> {
     const sessionId = Date.now().toString();
     const workDir = path.join(this.tempDir, sessionId);
 
     try {
       await mkdir(workDir, { recursive: true });
 
-      console.log('Saving narration...');
-      const narrationPath = path.join(workDir, 'narration.mp3');
-      await this.saveBase64File(composition.audio.url, narrationPath, 'audio');
+      console.log("Saving narration...");
+      const narrationPath = path.join(workDir, "narration.mp3");
+      await this.saveBase64File(composition.audio.url, narrationPath, "audio");
 
       // Verify narration file
       const narrationInfo = await checkFile(narrationPath);
       if (!narrationInfo.exists || narrationInfo.size === 0) {
-        throw new Error('Narration file is missing or empty');
+        throw new Error("Narration file is missing or empty");
       }
 
-      let musicPath: string | undefined;
-      if (composition.music?.url) {
-        console.log('Saving background music...');
-        musicPath = path.join(workDir, 'background_music.mp3');
-        await this.saveBase64File(composition.music.url, musicPath, 'audio');
-
-        const musicInfo = await checkFile(musicPath);
-        if (!musicInfo.exists || musicInfo.size === 0) {
-          throw new Error('Background music file is missing or empty');
-        }
-      }
-
-      console.log('Saving images...');
+      console.log("Saving images...");
       const imagePaths = await Promise.all(
         composition.scenes.map(async (scene, i) => {
           const imagePath = path.join(workDir, `scene_${i}.jpg`);
-          await this.saveBase64File(scene.image, imagePath, 'image');
+          await this.saveBase64File(scene.image, imagePath, "image");
           return imagePath;
         })
       );
 
       // Calculate scene durations
-      const sceneDurations = composition.scenes.map(scene => scene.duration);
-      const totalDuration = sceneDurations.reduce((sum, duration) => sum + duration, 0);
-
-
+      const sceneDurations = composition.scenes.map((scene) => scene.duration);
+      const totalDuration = sceneDurations.reduce(
+        (sum, duration) => sum + duration,
+        0
+      );
 
       const probeData = await probeFile(narrationPath);
       const duration = probeData.format.duration;
-      console.log('Audio duration:', duration);
+      console.log("Audio duration:", duration);
 
-      console.log('Generating subtitles...');
-      const subtitlesPath = path.join(workDir, 'subtitles.srt');
+      console.log("Generating subtitles...");
+      const subtitlesPath = path.join(workDir, "subtitles.srt");
       await generateSrtFile(composition.content, duration, subtitlesPath);
 
-      console.log('Creating base video...', {
+      console.log("Creating base video...", {
         sceneDurations,
         duration,
-        hasMusicTrack: !!musicPath
       });
 
-      const baseVideoPath = path.join(workDir, 'base_video.mp4');
+      const baseVideoPath = path.join(workDir, "base_video.mp4");
       await this.createSegmentedVideo(
         imagePaths,
         duration,
         sceneDurations,
         baseVideoPath,
         subtitlesPath,
-        '1080x1920'
+        "1080x1920"
       );
 
       const outputFileName = `story_${sessionId}.mp4`;
       const outputPath = path.join(this.outputDir, outputFileName);
 
-      console.log('Adding audio tracks...');
+      console.log("Adding audio tracks...");
       await new Promise<void>((resolve, reject) => {
-        let command = ffmpeg()
-          .input(baseVideoPath)
-          .input(narrationPath);
+        let command = ffmpeg().input(baseVideoPath).input(narrationPath);
 
-        if (musicPath) {
-          command = command.input(musicPath);
-        }
-
-        command.on('start', async (commandLine) => {
-          console.log('FFmpeg audio mixing command:', commandLine);
+        command.on("start", async (commandLine) => {
+          console.log("FFmpeg audio mixing command:", commandLine);
 
           try {
             const baseVideoInfo = await probeFile(baseVideoPath);
             const narrationInfo = await probeFile(narrationPath);
 
-            console.log('Input files probe:', {
+            console.log("Input files probe:", {
               baseVideo: {
                 format: baseVideoInfo.format?.format_name,
                 duration: baseVideoInfo.format?.duration,
-                size: baseVideoInfo.format?.size
+                size: baseVideoInfo.format?.size,
               },
               narration: {
                 format: narrationInfo.format?.format_name,
                 duration: narrationInfo.format?.duration,
-                size: narrationInfo.format?.size
-              }
+                size: narrationInfo.format?.size,
+              },
             });
           } catch (probeError) {
-            console.error('Failed to probe input files:', probeError);
+            console.error("Failed to probe input files:", probeError);
           }
         });
 
-        if (musicPath) {
-          console.log('Configuring audio mix with background music...');
-          command
-            .inputOptions([
-              '-stream_loop -1'
-            ])
-            .complexFilter([
-              `[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=1[narration]`,
-              `[2:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=${composition.music?.volume || 0.4}[music]`,
-              '[narration][music]amix=inputs=2:duration=first:dropout_transition=0[audio]'
-            ])
-            .outputOptions([
-              '-c:v copy',
-              '-map 0:v',
-              '-map [audio]',
-              '-shortest'
-            ]);
-        } else {
-          console.log('Configuring audio with narration only...');
-          command
-            .outputOptions([
-              '-c:v copy',
-              '-map 0:v',
-              '-map 1:a',
-              '-shortest'
-            ]);
-        }
+        console.log("Configuring audio with narration only...");
+        command.outputOptions([
+          "-c:v copy",
+          "-map 0:v",
+          "-map 1:a",
+          "-shortest",
+        ]);
 
         command
-          .on('stderr', (stderrLine) => {
-            console.log('FFmpeg stderr:', stderrLine);
+          .on("stderr", (stderrLine) => {
+            console.log("FFmpeg stderr:", stderrLine);
           })
-          .on('error', (err, stdout, stderr) => {
-            console.error('FFmpeg error:', {
+          .on("error", (err, stdout, stderr) => {
+            console.error("FFmpeg error:", {
               error: err.message,
               stdout,
-              stderr
+              stderr,
             });
             reject(new Error(`Audio mixing failed: ${err.message}`));
           })
-          .on('end', () => {
+          .on("end", () => {
             resolve();
           })
           .save(outputPath);
       });
 
       const outputInfo = await checkFile(outputPath);
-      console.log('Final output file check:', {
+      console.log("Final output file check:", {
         path: outputPath,
         exists: outputInfo.exists,
-        size: outputInfo.size
+        size: outputInfo.size,
       });
 
       await rm(workDir, { recursive: true, force: true });
 
       return {
-        videoUrl: `/stories/${outputFileName}`
+        videoUrl: `/stories/${outputFileName}`,
       };
     } catch (error) {
-      console.error('Video generation error:', error);
-      await rm(workDir, { recursive: true, force: true })
-        .catch(err => console.error('Cleanup error during error handling:', err));
+      console.error("Video generation error:", error);
+      await rm(workDir, { recursive: true, force: true }).catch((err) =>
+        console.error("Cleanup error during error handling:", err)
+      );
 
-      throw error instanceof Error ? error : new Error(`Video generation failed: ${error}`);
+      throw error instanceof Error
+        ? error
+        : new Error(`Video generation failed: ${error}`);
     }
   }
-
-
 }
