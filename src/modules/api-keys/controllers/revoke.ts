@@ -1,32 +1,24 @@
-import { makeRevokeApiKeysUseCase } from '@/modules/api-keys/use-cases/factories/make-revoke-api-key-use-case'
-import { FastifyRequest, FastifyReply } from 'fastify'
-import { z } from 'zod'
-import { ApiKeyRevoked } from '../use-cases/errors/api-key-already-revoked-error'
+import { makeRevokeApiKeysUseCase } from "@/modules/api-keys/use-cases/factories/make-revoke-api-key-use-case";
+import { FastifyReply, FastifyRequest } from "fastify";
+import { ApiKeyRevoked } from "../use-cases/errors/api-key-already-revoked-error";
+import { revokeApiKeyBodySchema, revokeApiKeyParamsSchema } from "./schemas";
 
 export async function revoke(request: FastifyRequest, reply: FastifyReply) {
-  const revokeApiKeyParamsSchema = z.object({
-    id: z.string(),
-  })
-  const revokeApiKeyBodySchema = z.object({
-    user_id: z.string(),
-  })
+  const { id } = revokeApiKeyParamsSchema.parse(request.params);
+  const { user_id } = revokeApiKeyBodySchema.parse(request.body);
 
-  const { id } = revokeApiKeyParamsSchema.parse(request.params)
-  const { user_id } = revokeApiKeyBodySchema.parse(request.body)
-
-  const revokeApiKeyUseCase = makeRevokeApiKeysUseCase()
+  const revokeApiKeyUseCase = makeRevokeApiKeysUseCase();
   try {
     await revokeApiKeyUseCase.execute({
       id,
-      userId: user_id
-    })
+      userId: user_id,
+    });
   } catch (err) {
     if (err instanceof ApiKeyRevoked) {
-      return reply.status(409).send({ message: err.message })
+      return reply.status(409).send({ message: err.message });
     }
-    throw err
+    throw err;
   }
 
-
-  return reply.status(204).send()
+  return reply.status(204).send();
 }
